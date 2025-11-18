@@ -1,1 +1,2 @@
-npm run check
+#!/bin/sh
+cd sims && npm run check
