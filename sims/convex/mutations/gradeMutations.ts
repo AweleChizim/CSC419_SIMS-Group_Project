@@ -6,8 +6,9 @@
 
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
+import { Id } from "../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../lib/errors";
-import { createAuditLog } from "../lib/services/auditLogService";
+import { createAuditLog, logCourseGradePosted, logGradeEdited } from "../lib/services/auditLogService";
 import { GradeValue } from "../lib/aggregates/types";
 
 /**
@@ -116,7 +117,7 @@ export const recordGrade = mutation({
       )
       .collect();
 
-    let gradeId: string;
+    let gradeId: Id<"grades">;
 
     if (existingGrades.length > 0) {
       // Update existing grade
@@ -137,22 +138,41 @@ export const recordGrade = mutation({
     }
 
     // Step 4: Create audit log entry
-    await createAuditLog(
-      ctx.db,
-      "grade",
-      "GradeRecorded",
-      args.recordedByUserId,
-      {
+    if (existingGrades.length > 0) {
+      // Grade was edited
+      const previousGrade = existingGrades[0].grade.letter;
+      await logGradeEdited(
+        ctx.db,
+        args.recordedByUserId,
         gradeId,
-        enrollmentId: args.enrollmentId,
-        assessmentId: args.assessmentId,
-        score: args.score,
-        maxScore: assessment.maxScore,
-        gradeValue,
-        studentId: enrollment.studentId,
-        sectionId: section._id,
-      }
-    );
+        previousGrade,
+        gradeValue.letter,
+        {
+          enrollmentId: args.enrollmentId,
+          assessmentId: args.assessmentId,
+          score: args.score,
+          maxScore: assessment.maxScore,
+          previousScore: existingGrades[0].grade.numeric,
+          newScore: gradeValue.numeric,
+        }
+      );
+    } else {
+      // New grade posted
+      await logCourseGradePosted(
+        ctx.db,
+        args.recordedByUserId,
+        gradeId,
+        {
+          enrollmentId: args.enrollmentId,
+          assessmentId: args.assessmentId,
+          score: args.score,
+          maxScore: assessment.maxScore,
+          gradeValue,
+          studentId: enrollment.studentId,
+          sectionId: section._id,
+        }
+      );
+    }
 
     return {
       success: true,
@@ -238,8 +258,8 @@ export const recordFinalGrade = mutation({
       "enrollment",
       "FinalGradeRecorded",
       args.recordedByUserId,
+      args.enrollmentId,
       {
-        enrollmentId: args.enrollmentId,
         finalGrade: finalGradeValue,
         finalPercentage,
       }

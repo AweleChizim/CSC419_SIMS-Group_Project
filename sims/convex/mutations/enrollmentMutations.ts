@@ -15,7 +15,7 @@ import {
 import {
   validateEnrollmentDomainChecks,
 } from "../lib/services/enrollmentService";
-import { createAuditLog } from "../lib/services/auditLogService";
+import { logStudentEnrolled, logStudentDropped } from "../lib/services/auditLogService";
 
 /**
  * Operation: Enroll Student in a Section
@@ -75,13 +75,11 @@ export const enrollStudentInSection = mutation({
     // Step 6: Create audit log entry
     // Note: We need a userId for audit log - using student.userId as the actor
     // In a real system, you might get this from authentication context
-    await createAuditLog(
+    await logStudentEnrolled(
       ctx.db,
-      "enrollment",
-      "StudentEnrolled",
       student.userId,
+      enrollmentId,
       {
-        enrollmentId,
         studentId: args.studentId,
         sectionId: args.sectionId,
         courseId: section.courseId,
@@ -134,13 +132,11 @@ export const dropEnrollment = mutation({
     });
 
     // Create audit log
-    await createAuditLog(
+    await logStudentDropped(
       ctx.db,
-      "enrollment",
-      "StudentDropped",
       args.userId,
+      args.enrollmentId,
       {
-        enrollmentId: args.enrollmentId,
         studentId: enrollment.studentId,
         sectionId: enrollment.sectionId,
       }

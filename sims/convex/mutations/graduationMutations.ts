@@ -15,7 +15,7 @@ import {
   validateProgramRequirements,
   runDegreeAudit,
 } from "../lib/services/graduationService";
-import { createAuditLog } from "../lib/services/auditLogService";
+import { logGraduationApproved } from "../lib/services/auditLogService";
 
 /**
  * Operation: Process a Student's Graduation
@@ -70,13 +70,11 @@ export const processStudentGraduation = mutation({
     });
 
     // Step 7: Create audit log entry
-    await createAuditLog(
+    await logGraduationApproved(
       ctx.db,
-      "graduation",
-      "GraduationApproved",
       args.approverUserId,
+      graduationId,
       {
-        graduationId,
         studentId: args.studentId,
         programId: student.programId,
         auditResult: {
