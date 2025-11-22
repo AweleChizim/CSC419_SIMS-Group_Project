@@ -1,0 +1,204 @@
+/**
+ * Example Mutations Using Aggregate Validation
+ * 
+ * This file demonstrates how to use the aggregate validation functions
+ * in Convex mutations. These are examples - adapt them to your needs.
+ */
+
+import { mutation } from "../_generated/server";
+import { v } from "convex/values";
+import {
+  validateCreateStudent,
+  validateUpdateStudent,
+  validateStudentCanEnroll,
+  InvariantViolationError,
+  NotFoundError,
+  ValidationError,
+} from "../lib/aggregates";
+
+/**
+ * Example: Create a new student
+ * 
+ * This mutation demonstrates:
+ * - Validating invariants before creation
+ * - Error handling
+ * - Atomic transaction (Convex mutations are atomic by default)
+ */
+export const createStudent = mutation({
+  args: {
+    userId: v.id("users"),
+    studentNumber: v.string(),
+    programId: v.id("programs"),
+    level: v.string(),
+    status: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Validate all invariants before creating
+    await validateCreateStudent(
+      ctx.db,
+      args.userId,
+      args.studentNumber,
+      args.programId,
+      args.status as "active" | "suspended" | "graduated" | "inactive"
+    );
+
+    // If validation passes, create the student
+    const studentId = await ctx.db.insert("students", {
+      userId: args.userId,
+      studentNumber: args.studentNumber,
+      admissionYear: new Date().getFullYear(),
+      programId: args.programId,
+      level: args.level,
+      status: args.status,
+    });
+
+    return studentId;
+  },
+});
+
+/**
+ * Example: Update student status
+ * 
+ * This mutation demonstrates:
+ * - Validating status transitions
+ * - Updating related entities atomically
+ */
+export const updateStudentStatus = mutation({
+  args: {
+    studentId: v.id("students"),
+    newStatus: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Validate the status update
+    await validateUpdateStudent(
+      ctx.db,
+      args.studentId,
+      args.newStatus as "active" | "suspended" | "graduated" | "inactive"
+    );
+
+    // Update the student
+    await ctx.db.patch(args.studentId, {
+      status: args.newStatus,
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Example: Enroll student in a section
+ * 
+ * This mutation demonstrates:
+ * - Validating student can enroll (status check)
+ * - Validating section capacity
+ * - Atomic enrollment and capacity update
+ */
+export const enrollStudent = mutation({
+  args: {
+    studentId: v.id("students"),
+    sectionId: v.id("sections"),
+    termId: v.id("terms"),
+  },
+  handler: async (ctx, args) => {
+    // Import enrollment validations
+    const { validateCreateEnrollment, validateCanEnroll } = await import(
+      "../lib/aggregates"
+    );
+
+    // Validate student can enroll
+    await validateStudentCanEnroll(ctx.db, args.studentId);
+
+    // Validate section has capacity
+    await validateCanEnroll(ctx.db, args.sectionId);
+
+    // Validate enrollment invariants
+    await validateCreateEnrollment(
+      ctx.db,
+      args.studentId,
+      args.sectionId,
+      args.termId,
+      "enrolled"
+    );
+
+    // Get section to update enrollment count
+    const section = await ctx.db.get(args.sectionId);
+    if (!section) {
+      throw new NotFoundError("Section", args.sectionId);
+    }
+
+    // Create enrollment and update section capacity atomically
+    const enrollmentId = await ctx.db.insert("enrollments", {
+      studentId: args.studentId,
+      sectionId: args.sectionId,
+      sessionId: section.sessionId,
+      termId: args.termId,
+      status: "enrolled",
+      enrolledAt: Date.now(),
+    });
+
+    // Update enrollment count
+    await ctx.db.patch(args.sectionId, {
+      enrollmentCount: section.enrollmentCount + 1,
+    });
+
+    return enrollmentId;
+  },
+});
+
+/**
+ * Example: Error handling wrapper
+ * 
+ * This demonstrates a pattern for consistent error handling
+ */
+function handleDomainErrors(error: unknown): never {
+  if (error instanceof InvariantViolationError) {
+    // Log for monitoring
+    console.error(`[${error.aggregate}] ${error.invariant}:`, error.message);
+    // Return user-friendly error
+    throw new Error(`Business rule violation: ${error.message}`);
+  } else if (error instanceof NotFoundError) {
+    throw new Error(`Not found: ${error.message}`);
+  } else if (error instanceof ValidationError) {
+    throw new Error(`Validation failed: ${error.message}`);
+  }
+  // Re-throw unknown errors
+  throw error;
+}
+
+/**
+ * Example: Create student with error handling
+ */
+export const createStudentWithErrorHandling = mutation({
+  args: {
+    userId: v.id("users"),
+    studentNumber: v.string(),
+    programId: v.id("programs"),
+    level: v.string(),
+    status: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      await validateCreateStudent(
+        ctx.db,
+        args.userId,
+        args.studentNumber,
+        args.programId,
+        args.status as "active" | "suspended" | "graduated" | "inactive"
+      );
+
+      const studentId = await ctx.db.insert("students", {
+        userId: args.userId,
+        studentNumber: args.studentNumber,
+        admissionYear: new Date().getFullYear(),
+        programId: args.programId,
+        level: args.level,
+        status: args.status,
+      });
+
+      return { success: true, studentId };
+    } catch (error) {
+      handleDomainErrors(error);
+    }
+  },
+});
+

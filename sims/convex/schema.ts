@@ -6,6 +6,25 @@ import { v } from "convex/values";
  * 
  * This schema defines all primary collections for the Student Information Management System (SIMS)
  * along with embedded value objects used within them.
+ * 
+ * AGGREGATE ROOTS:
+ * Each collection marked as an Aggregate Root serves as the primary entry point for modifications
+ * to that aggregate. All invariants must be enforced within a single transaction.
+ * 
+ * For detailed documentation on Aggregate boundaries and invariants, see:
+ * ../docs/aggregates_and_invariants.md
+ * 
+ * Aggregate Roots in this schema:
+ * - schools (SchoolAggregate)
+ * - programs (ProgramAggregate)
+ * - courses (CourseAggregate)
+ * - sections (SectionAggregate)
+ * - students (StudentAggregate)
+ * - enrollments (EnrollmentAggregate)
+ * - academicSessions (AcademicCalendarAggregate)
+ * - users (UserAggregate)
+ * - transcripts (TranscriptAggregate)
+ * - graduationRecords (GraduationAggregate)
  */
 
 export default defineSchema({
@@ -14,8 +33,9 @@ export default defineSchema({
   // ============================================================================
 
   /**
-   * Schools Collection
+   * Schools Collection (AGGREGATE ROOT: SchoolAggregate)
    * Represents educational institutions
+   * See ../docs/aggregates_and_invariants.md for invariants
    */
   schools: defineTable({
     name: v.string(),
@@ -48,9 +68,10 @@ export default defineSchema({
     .index("by_name", ["name"]),
 
   /**
-   * Programs Collection
+   * Programs Collection (AGGREGATE ROOT: ProgramAggregate)
    * Represents academic programs offered by departments
    * Foreign Keys: departmentId → departments._id
+   * See ../docs/aggregates_and_invariants.md for invariants
    */
   programs: defineTable({
     departmentId: v.id("departments"),
@@ -62,8 +83,9 @@ export default defineSchema({
     .index("by_code", ["code"]),
 
   /**
-   * Courses Collection
+   * Courses Collection (AGGREGATE ROOT: CourseAggregate)
    * Represents individual courses that can be offered
+   * See ../docs/aggregates_and_invariants.md for invariants
    */
   courses: defineTable({
     code: v.string(),
@@ -75,10 +97,11 @@ export default defineSchema({
     .index("by_code", ["code"]),
 
   /**
-   * Sections Collection
+   * Sections Collection (AGGREGATE ROOT: SectionAggregate)
    * Represents specific course offerings in a term
    * Uses AcademicPeriod value object to contextualize the section
    * Foreign Keys: courseId → courses._id, termId → terms._id, instructorId → users._id
+   * See ../docs/aggregates_and_invariants.md for invariants
    */
   sections: defineTable({
     courseId: v.id("courses"),
@@ -104,8 +127,9 @@ export default defineSchema({
     .index("by_courseId_termId", ["courseId", "termId"]),
 
   /**
-   * Users Collection
+   * Users Collection (AGGREGATE ROOT: UserAggregate)
    * Represents all system users (students, instructors, admins, etc.)
+   * See ../docs/aggregates_and_invariants.md for invariants
    */
   users: defineTable({
     username: v.string(),
@@ -120,10 +144,11 @@ export default defineSchema({
     .index("by_username", ["username"]),
 
   /**
-   * Students Collection
+   * Students Collection (AGGREGATE ROOT: StudentAggregate)
    * Represents student-specific information linked to users
    * Uses StudentIdentifier value object
    * Foreign Keys: userId → users._id, programId → programs._id
+   * See ../docs/aggregates_and_invariants.md for invariants
    */
   students: defineTable({
     userId: v.id("users"),
@@ -139,10 +164,11 @@ export default defineSchema({
     .index("by_status", ["status"]),
 
   /**
-   * Enrollments Collection
+   * Enrollments Collection (AGGREGATE ROOT: EnrollmentAggregate)
    * Represents student enrollments in course sections
    * Uses AcademicPeriod value object to contextualize the enrollment
    * Foreign Keys: studentId → students._id, sectionId → sections._id
+   * See ../docs/aggregates_and_invariants.md for invariants
    */
   enrollments: defineTable({
     studentId: v.id("students"),
@@ -194,9 +220,10 @@ export default defineSchema({
     .index("by_enrollmentId_assessmentId", ["enrollmentId", "assessmentId"]),
 
   /**
-   * Transcripts Collection
+   * Transcripts Collection (AGGREGATE ROOT: TranscriptAggregate)
    * Represents student academic transcripts
    * Foreign Keys: studentId → students._id
+   * See ../docs/aggregates_and_invariants.md for invariants
    */
   transcripts: defineTable({
     studentId: v.id("students"),
@@ -227,9 +254,10 @@ export default defineSchema({
     .index("by_studentId", ["studentId"]),
 
   /**
-   * Academic Sessions Collection
+   * Academic Sessions Collection (AGGREGATE ROOT: AcademicCalendarAggregate)
    * Represents academic sessions and their terms
    * Note: Terms are also stored in a separate 'terms' collection for proper id references
+   * See ../docs/aggregates_and_invariants.md for invariants
    */
   academicSessions: defineTable({
     label: v.string(),
@@ -259,9 +287,10 @@ export default defineSchema({
     .index("by_sessionId", ["sessionId"]),
 
   /**
-   * Graduation Records Collection
+   * Graduation Records Collection (AGGREGATE ROOT: GraduationAggregate)
    * Represents graduation approvals and records
    * Foreign Keys: studentId → students._id, approvedBy → users._id
+   * See ../docs/aggregates_and_invariants.md for invariants
    */
   graduationRecords: defineTable({
     studentId: v.id("students"),
