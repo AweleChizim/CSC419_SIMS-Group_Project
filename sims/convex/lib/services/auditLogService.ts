@@ -36,7 +36,7 @@ export interface AuditLogEntry {
   action: string; // Action performed (e.g., "StudentEnrolled", "GradeEdited")
   userId: Id<"users">; // User who performed the action
   timestamp: number; // Unix timestamp
-  details: Record<string, any>; // Relevant details (e.g., { "previousGrade": "A", "newGrade": "B" })
+  details: Record<string, unknown>; // Relevant details (e.g., { "previousGrade": "A", "newGrade": "B" })
 }
 
 /**
@@ -55,7 +55,7 @@ export async function createAuditLog(
   action: string,
   userId: Id<"users">,
   entityId?: string,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return await db.insert("auditLogs", {
     entity,
@@ -77,7 +77,7 @@ export async function logStudentEnrolled(
   db: DatabaseWriter,
   userId: Id<"users">,
   enrollmentId: Id<"enrollments">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -93,7 +93,7 @@ export async function logStudentDropped(
   db: DatabaseWriter,
   userId: Id<"users">,
   enrollmentId: Id<"enrollments">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -109,7 +109,7 @@ export async function logCourseGradePosted(
   db: DatabaseWriter,
   userId: Id<"users">,
   gradeId: Id<"grades">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -127,7 +127,7 @@ export async function logGradeEdited(
   gradeId: Id<"grades">,
   previousGrade: string,
   newGrade: string,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -147,7 +147,7 @@ export async function logGraduationApproved(
   db: DatabaseWriter,
   userId: Id<"users">,
   graduationId: Id<"graduationRecords">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -163,7 +163,7 @@ export async function logSectionCancelled(
   db: DatabaseWriter,
   userId: Id<"users">,
   sectionId: Id<"sections">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -181,7 +181,7 @@ export async function logUserRoleChanged(
   targetUserId: Id<"users">,
   previousRoles: string[],
   newRoles: string[],
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -201,7 +201,7 @@ export async function logStudentCreated(
   db: DatabaseWriter,
   userId: Id<"users">,
   studentId: Id<"students">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -219,7 +219,7 @@ export async function logStudentUpdated(
   studentId: Id<"students">,
   previousStatus?: string,
   newStatus?: string,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -239,7 +239,7 @@ export async function logCourseCreated(
   db: DatabaseWriter,
   userId: Id<"users">,
   courseId: Id<"courses">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -255,7 +255,7 @@ export async function logCourseUpdated(
   db: DatabaseWriter,
   userId: Id<"users">,
   courseId: Id<"courses">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -271,7 +271,7 @@ export async function logSectionCreated(
   db: DatabaseWriter,
   userId: Id<"users">,
   sectionId: Id<"sections">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -289,7 +289,7 @@ export async function logSectionUpdated(
   sectionId: Id<"sections">,
   previousCapacity?: number,
   newCapacity?: number,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -309,7 +309,7 @@ export async function logProgramCreated(
   db: DatabaseWriter,
   userId: Id<"users">,
   programId: Id<"programs">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -325,7 +325,7 @@ export async function logProgramUpdated(
   db: DatabaseWriter,
   userId: Id<"users">,
   programId: Id<"programs">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -341,7 +341,7 @@ export async function logAssessmentCreated(
   db: DatabaseWriter,
   userId: Id<"users">,
   assessmentId: Id<"assessments">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -357,7 +357,7 @@ export async function logAssessmentUpdated(
   db: DatabaseWriter,
   userId: Id<"users">,
   assessmentId: Id<"assessments">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,
@@ -373,7 +373,7 @@ export async function logTranscriptGenerated(
   db: DatabaseWriter,
   userId: Id<"users">,
   transcriptId: Id<"transcripts">,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): Promise<Id<"auditLogs">> {
   return createAuditLog(
     db,

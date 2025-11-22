@@ -8,7 +8,7 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { Transcript, TranscriptEntry, GradeValue } from "./types";
+import { Transcript, TranscriptEntry } from "./types";
 
 /**
  * Calculates GPA from transcript entries
@@ -164,11 +164,8 @@ export async function validateAddTranscriptEntry(
 
   validateTranscriptEntry(newEntry);
 
-  // Calculate new GPA with the new entry
-  const updatedEntries = [...transcript.entries, newEntry];
-  const newGPA = calculateGPA(updatedEntries);
-
-  // Note: The caller should update the GPA in the same transaction
+  // Note: The caller should calculate and update the GPA in the same transaction
+  // using: const newGPA = calculateGPA([...transcript.entries, newEntry]);
 }
 
 /**

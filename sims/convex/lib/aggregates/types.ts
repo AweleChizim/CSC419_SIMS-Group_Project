@@ -36,12 +36,20 @@ export interface School {
 // Program Aggregate Types
 // ============================================================================
 
+export interface ProgramRequirements {
+  minCredits?: number;
+  maxCredits?: number;
+  minGPA?: number;
+  requiredCourses?: Id<"courses">[];
+  [key: string]: unknown; // Allow additional flexible fields
+}
+
 export interface Program {
   _id: Id<"programs">;
   departmentId: Id<"departments">;
   code: string;
   name: string;
-  requirements: any; // Flexible structure for program requirements
+  requirements?: ProgramRequirements;
 }
 
 // ============================================================================

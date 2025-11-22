@@ -87,7 +87,7 @@ export const updateProgram = mutation({
       departmentId?: typeof args.departmentId;
       code?: string;
       name?: string;
-      requirements?: any;
+      requirements?: unknown;
     } = {};
 
     if (args.departmentId !== undefined) updates.departmentId = args.departmentId;

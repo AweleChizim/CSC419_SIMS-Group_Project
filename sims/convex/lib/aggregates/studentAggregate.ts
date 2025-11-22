@@ -43,10 +43,11 @@ export function validateCanEnroll(student: Student): void {
 /**
  * Validates that a student can perform read operations
  */
-export function validateCanRead(student: Student): void {
+export function validateCanRead(_student: Student): void {
   // All students can read their own data, regardless of status
   // This is a placeholder for more complex authorization logic
-  return;
+  // Parameter is intentionally unused - reserved for future authorization checks
+  void _student; // Suppress unused parameter warning
 }
 
 /**

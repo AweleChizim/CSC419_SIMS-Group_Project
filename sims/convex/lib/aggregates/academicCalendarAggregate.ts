@@ -8,7 +8,6 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { AcademicSession, Term } from "./types";
 
 /**
  * Validates term date validity

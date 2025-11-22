@@ -8,7 +8,7 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { GraduationRecord, Student, UserRole, TranscriptEntry } from "./types";
+import { Student, UserRole, TranscriptEntry } from "./types";
 
 /**
  * Valid roles that can approve graduation
@@ -56,10 +56,6 @@ export async function validateGraduationStudent(
  * Validates graduation date
  */
 export function validateGraduationDate(date: number): void {
-  const now = Date.now();
-  // Allow dates up to 1 year in the future for planned graduations
-  const maxFutureDate = now + 365 * 24 * 60 * 60 * 1000;
-
   if (date < 0) {
     throw new InvariantViolationError(
       "GraduationAggregate",

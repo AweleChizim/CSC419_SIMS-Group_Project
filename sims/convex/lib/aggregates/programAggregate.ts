@@ -8,7 +8,7 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { Program } from "./types";
+import { ProgramRequirements } from "./types";
 
 /**
  * Validates that a program belongs to a valid department
@@ -57,7 +57,7 @@ export async function validateProgramCodeUniqueness(
  */
 export async function validateProgramCoursePrerequisites(
   db: DatabaseReader,
-  requirements: any
+  requirements: ProgramRequirements | undefined
 ): Promise<void> {
   // Extract course IDs from requirements
   // This is a simplified version - adjust based on your requirements structure
@@ -85,7 +85,7 @@ export async function validateProgramCoursePrerequisites(
 /**
  * Validates credit requirements consistency
  */
-export function validateCreditRequirements(requirements: any): void {
+export function validateCreditRequirements(requirements: ProgramRequirements | undefined): void {
   if (!requirements) return;
 
   const minCredits = requirements.minCredits;
@@ -117,7 +117,7 @@ export async function validateCreateProgram(
   db: DatabaseReader,
   departmentId: Id<"departments">,
   code: string,
-  requirements: any
+  requirements: ProgramRequirements | undefined
 ): Promise<void> {
   await validateProgramDepartment(db, departmentId);
   await validateProgramCodeUniqueness(db, code, departmentId);
@@ -133,7 +133,7 @@ export async function validateUpdateProgram(
   programId: Id<"programs">,
   departmentId?: Id<"departments">,
   code?: string,
-  requirements?: any
+  requirements?: ProgramRequirements
 ): Promise<void> {
   const program = await db.get(programId);
   if (!program) {
@@ -141,8 +141,6 @@ export async function validateUpdateProgram(
   }
 
   const finalDepartmentId = departmentId ?? program.departmentId;
-  const finalCode = code ?? program.code;
-  const finalRequirements = requirements ?? program.requirements;
 
   if (departmentId) {
     await validateProgramDepartment(db, departmentId);

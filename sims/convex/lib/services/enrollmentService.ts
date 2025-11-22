@@ -8,7 +8,7 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { Course, Section, Enrollment, ScheduleSlotSpec } from "../aggregates/types";
+import { ScheduleSlotSpec } from "../aggregates/types";
 
 /**
  * Checks if a student has completed all prerequisites for a course

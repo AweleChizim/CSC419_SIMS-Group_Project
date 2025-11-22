@@ -7,8 +7,8 @@
 
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
-import { InvariantViolationError, NotFoundError } from "../errors";
-import { Section, ScheduleSlotSpec, Term } from "../aggregates/types";
+import { InvariantViolationError } from "../errors";
+import { ScheduleSlotSpec } from "../aggregates/types";
 
 /**
  * Checks if two schedule slots overlap

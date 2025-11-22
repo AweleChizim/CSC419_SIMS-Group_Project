@@ -6,7 +6,6 @@
 
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { Id } from "../_generated/dataModel";
 import { NotFoundError, InvariantViolationError } from "../lib/errors";
 import { validateAssessmentWeight } from "../lib/aggregates";
 import { logAssessmentCreated, logAssessmentUpdated } from "../lib/services/auditLogService";

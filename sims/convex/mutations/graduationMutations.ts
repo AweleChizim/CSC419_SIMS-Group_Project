@@ -8,11 +8,9 @@ import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { NotFoundError } from "../lib/errors";
 import {
-  validateCreateGraduation,
   validateApproverAuthority,
 } from "../lib/aggregates";
 import {
-  validateProgramRequirements,
   runDegreeAudit,
 } from "../lib/services/graduationService";
 import { logGraduationApproved } from "../lib/services/auditLogService";

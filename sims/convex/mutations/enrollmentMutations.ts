@@ -9,7 +9,6 @@ import { v } from "convex/values";
 import {
   validateStudentCanEnroll,
   validateSectionCanEnroll,
-  validateCreateEnrollment,
   NotFoundError,
 } from "../lib/aggregates";
 import {

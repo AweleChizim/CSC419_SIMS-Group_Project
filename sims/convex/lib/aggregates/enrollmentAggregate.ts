@@ -8,7 +8,7 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { Enrollment, EnrollmentStatus, Grade } from "./types";
+import { Enrollment, EnrollmentStatus } from "./types";
 
 /**
  * Valid enrollment status values

@@ -8,7 +8,7 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError, ValidationError } from "../errors";
-import { User, UserRole } from "./types";
+import { UserRole } from "./types";
 
 /**
  * Valid user roles
@@ -113,13 +113,12 @@ export async function validateRoleConsistency(
 ): Promise<void> {
   // Check if user has student role
   if (roles.includes("student")) {
-    const student = await db
+    // Note: Student record validation could be added here if needed
+    // For now, we allow student role assignment even if student record doesn't exist yet
+    await db
       .query("students")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
-
-    // Note: This is a warning, not an error, as student record might be created later
-    // Adjust based on your business rules
   }
 
   // Add similar checks for other roles if needed

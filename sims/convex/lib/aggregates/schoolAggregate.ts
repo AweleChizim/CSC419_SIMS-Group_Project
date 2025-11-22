@@ -8,7 +8,6 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { School } from "./types";
 
 /**
  * Validates that a department belongs to a valid school

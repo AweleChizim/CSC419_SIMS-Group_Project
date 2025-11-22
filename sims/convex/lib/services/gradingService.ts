@@ -8,7 +8,7 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { Assessment, Grade, GradeValue, Enrollment } from "../aggregates/types";
+import { GradeValue } from "../aggregates/types";
 
 /**
  * Converts a numeric score to a letter grade and points
@@ -182,9 +182,9 @@ export async function validateGradeAppeal(
 
   // Check if appeal deadline has passed (e.g., 30 days after grade posted)
   // This is a simplified check - adjust based on your business rules
-  const appealDeadline = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
   // Note: We'd need to track when the grade was created to check this
   // For now, we'll assume appeals are always allowed within the deadline
+  // const appealDeadline = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 }
 
 /**

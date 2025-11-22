@@ -12,10 +12,6 @@ import {
   Transcript,
   TranscriptEntry,
   GradeValue,
-  Enrollment,
-  Grade,
-  Assessment,
-  Course,
 } from "../aggregates/types";
 
 /**

@@ -8,7 +8,7 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { Section, Assessment, ScheduleSlotSpec, UserRole } from "./types";
+import { ScheduleSlotSpec, UserRole } from "./types";
 
 /**
  * Validates enrollment capacity constraint

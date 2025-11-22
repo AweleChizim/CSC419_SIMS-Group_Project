@@ -8,7 +8,6 @@ import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { NotFoundError } from "../lib/errors";
 import { validateCreateSection, validateUpdateSection } from "../lib/aggregates";
-import { validateScheduleAssignment } from "../lib/services/schedulingService";
 import { logSectionCancelled, logSectionCreated, logSectionUpdated } from "../lib/services/auditLogService";
 
 /**

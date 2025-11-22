@@ -8,7 +8,6 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { Course } from "./types";
 
 /**
  * Validates course code uniqueness
