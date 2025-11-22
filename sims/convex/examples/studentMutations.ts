@@ -20,6 +20,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "../lib/aggregates";
+import { logStudentCreated, logStudentUpdated } from "../lib/services/auditLogService";
 
 /**
  * Example: Create a new student
@@ -36,6 +37,7 @@ export const createStudent = mutation({
     programId: v.id("programs"),
     level: v.string(),
     status: v.string(),
+    createdByUserId: v.id("users"), // User performing the action (admin/registrar)
   },
   handler: async (ctx, args) => {
     // Validate all invariants before creating
@@ -57,6 +59,21 @@ export const createStudent = mutation({
       status: args.status,
     });
 
+    // Create audit log
+    await logStudentCreated(
+      ctx.db,
+      args.createdByUserId,
+      studentId,
+      {
+        userId: args.userId,
+        studentNumber: args.studentNumber,
+        programId: args.programId,
+        level: args.level,
+        status: args.status,
+        admissionYear: new Date().getFullYear(),
+      }
+    );
+
     return studentId;
   },
 });
@@ -72,8 +89,17 @@ export const updateStudentStatus = mutation({
   args: {
     studentId: v.id("students"),
     newStatus: v.string(),
+    updatedByUserId: v.id("users"), // User performing the action
   },
   handler: async (ctx, args) => {
+    // Get current student to capture previous status
+    const student = await ctx.db.get(args.studentId);
+    if (!student) {
+      throw new NotFoundError("Student", args.studentId);
+    }
+
+    const previousStatus = student.status;
+
     // Validate the status update
     await validateUpdateStudent(
       ctx.db,
@@ -85,6 +111,18 @@ export const updateStudentStatus = mutation({
     await ctx.db.patch(args.studentId, {
       status: args.newStatus,
     });
+
+    // Create audit log
+    await logStudentUpdated(
+      ctx.db,
+      args.updatedByUserId,
+      args.studentId,
+      previousStatus,
+      args.newStatus,
+      {
+        studentNumber: student.studentNumber,
+      }
+    );
 
     return { success: true };
   },
@@ -183,6 +221,7 @@ export const createStudentWithErrorHandling = mutation({
     programId: v.id("programs"),
     level: v.string(),
     status: v.string(),
+    createdByUserId: v.id("users"), // User performing the action
   },
   handler: async (ctx, args) => {
     try {
@@ -202,6 +241,21 @@ export const createStudentWithErrorHandling = mutation({
         level: args.level,
         status: args.status,
       });
+
+      // Create audit log
+      await logStudentCreated(
+        ctx.db,
+        args.createdByUserId,
+        studentId,
+        {
+          userId: args.userId,
+          studentNumber: args.studentNumber,
+          programId: args.programId,
+          level: args.level,
+          status: args.status,
+          admissionYear: new Date().getFullYear(),
+        }
+      );
 
       return { success: true, studentId };
     } catch (error) {

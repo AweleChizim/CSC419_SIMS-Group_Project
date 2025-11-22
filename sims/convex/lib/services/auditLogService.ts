@@ -3,14 +3,25 @@
  * 
  * Service for creating audit log entries for system events.
  * 
- * Required Events to Log:
+ * All Key Events Logged:
  * - StudentEnrolled
  * - StudentDropped
+ * - StudentCreated
+ * - StudentUpdated
  * - CourseGradePosted
  * - GradeEdited
- * - GraduationApproved
+ * - CourseCreated
+ * - CourseUpdated
+ * - SectionCreated
+ * - SectionUpdated
  * - SectionCancelled
+ * - ProgramCreated
+ * - ProgramUpdated
+ * - AssessmentCreated
+ * - AssessmentUpdated
+ * - GraduationApproved
  * - UserRoleChanged
+ * - TranscriptGenerated
  */
 
 import { DatabaseWriter } from "../../_generated/server";
@@ -183,6 +194,194 @@ export async function logUserRoleChanged(
       newRoles,
       ...details,
     }
+  );
+}
+
+export async function logStudentCreated(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  studentId: Id<"students">,
+  details?: Record<string, any>
+): Promise<Id<"auditLogs">> {
+  return createAuditLog(
+    db,
+    "student",
+    "StudentCreated",
+    userId,
+    studentId,
+    details
+  );
+}
+
+export async function logStudentUpdated(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  studentId: Id<"students">,
+  previousStatus?: string,
+  newStatus?: string,
+  details?: Record<string, any>
+): Promise<Id<"auditLogs">> {
+  return createAuditLog(
+    db,
+    "student",
+    "StudentUpdated",
+    userId,
+    studentId,
+    {
+      ...(previousStatus && { previousStatus }),
+      ...(newStatus && { newStatus }),
+      ...details,
+    }
+  );
+}
+
+export async function logCourseCreated(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  courseId: Id<"courses">,
+  details?: Record<string, any>
+): Promise<Id<"auditLogs">> {
+  return createAuditLog(
+    db,
+    "course",
+    "CourseCreated",
+    userId,
+    courseId,
+    details
+  );
+}
+
+export async function logCourseUpdated(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  courseId: Id<"courses">,
+  details?: Record<string, any>
+): Promise<Id<"auditLogs">> {
+  return createAuditLog(
+    db,
+    "course",
+    "CourseUpdated",
+    userId,
+    courseId,
+    details
+  );
+}
+
+export async function logSectionCreated(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  sectionId: Id<"sections">,
+  details?: Record<string, any>
+): Promise<Id<"auditLogs">> {
+  return createAuditLog(
+    db,
+    "section",
+    "SectionCreated",
+    userId,
+    sectionId,
+    details
+  );
+}
+
+export async function logSectionUpdated(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  sectionId: Id<"sections">,
+  previousCapacity?: number,
+  newCapacity?: number,
+  details?: Record<string, any>
+): Promise<Id<"auditLogs">> {
+  return createAuditLog(
+    db,
+    "section",
+    "SectionUpdated",
+    userId,
+    sectionId,
+    {
+      ...(previousCapacity !== undefined && { previousCapacity }),
+      ...(newCapacity !== undefined && { newCapacity }),
+      ...details,
+    }
+  );
+}
+
+export async function logProgramCreated(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  programId: Id<"programs">,
+  details?: Record<string, any>
+): Promise<Id<"auditLogs">> {
+  return createAuditLog(
+    db,
+    "program",
+    "ProgramCreated",
+    userId,
+    programId,
+    details
+  );
+}
+
+export async function logProgramUpdated(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  programId: Id<"programs">,
+  details?: Record<string, any>
+): Promise<Id<"auditLogs">> {
+  return createAuditLog(
+    db,
+    "program",
+    "ProgramUpdated",
+    userId,
+    programId,
+    details
+  );
+}
+
+export async function logAssessmentCreated(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  assessmentId: Id<"assessments">,
+  details?: Record<string, any>
+): Promise<Id<"auditLogs">> {
+  return createAuditLog(
+    db,
+    "assessment",
+    "AssessmentCreated",
+    userId,
+    assessmentId,
+    details
+  );
+}
+
+export async function logAssessmentUpdated(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  assessmentId: Id<"assessments">,
+  details?: Record<string, any>
+): Promise<Id<"auditLogs">> {
+  return createAuditLog(
+    db,
+    "assessment",
+    "AssessmentUpdated",
+    userId,
+    assessmentId,
+    details
+  );
+}
+
+export async function logTranscriptGenerated(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  transcriptId: Id<"transcripts">,
+  details?: Record<string, any>
+): Promise<Id<"auditLogs">> {
+  return createAuditLog(
+    db,
+    "transcript",
+    "TranscriptGenerated",
+    userId,
+    transcriptId,
+    details
   );
 }
 
