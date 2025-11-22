@@ -5,7 +5,7 @@ This directory contains the implementation of aggregate root validation function
 ## Structure
 
 ```
-lib/
+convex/lib/
 ├── errors.ts                    # Domain error classes
 ├── aggregates/
 │   ├── index.ts                # Main export file
@@ -20,7 +20,7 @@ lib/
 │   ├── transcriptAggregate.ts  # Transcript aggregate validations
 │   ├── academicCalendarAggregate.ts  # Academic calendar validations
 │   └── graduationAggregate.ts  # Graduation aggregate validations
-└── README.md                   # This file
+└── services/                   # Domain services (see domain_services.md)
 ```
 
 ## Usage
@@ -30,7 +30,7 @@ lib/
 ```typescript
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
-import { validateCreateStudent } from "./lib/aggregates";
+import { validateCreateStudent } from "../lib/aggregates";
 
 export const createStudent = mutation({
   args: {
@@ -74,7 +74,7 @@ import {
   InvariantViolationError, 
   NotFoundError, 
   ValidationError 
-} from "./lib/errors";
+} from "../lib/errors";
 
 export const createStudent = mutation({
   handler: async (ctx, args) => {
@@ -127,7 +127,7 @@ export const createStudent = mutation({
 ### Section Aggregate
 - `validateCreateSection(db, courseId, termId, instructorId, capacity, scheduleSlots)`
 - `validateUpdateSection(db, sectionId, capacity?, scheduleSlots?, instructorId?)`
-- `validateCanEnroll(db, sectionId)`
+- `validateSectionCanEnroll(db, sectionId)`
 - `validateEnrollmentCapacity(enrollmentCount, capacity)`
 - `validateCapacityUpdate(currentEnrollmentCount, newCapacity)`
 - `validateAssessmentWeights(db, sectionId, excludeAssessmentId?)`
@@ -240,7 +240,7 @@ Each validation function should have corresponding unit tests. Example test stru
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { validateCreateStudent } from "./lib/aggregates";
+import { validateCreateStudent } from "../lib/aggregates";
 
 describe("StudentAggregate", () => {
   it("should validate student creation", async () => {
@@ -255,6 +255,7 @@ describe("StudentAggregate", () => {
 
 ## Related Documentation
 
-- [Aggregate Roots and Invariants Documentation](../../docs/aggregates_and_invariants.md)
-- [Schema Definition](../schema.ts)
+- [Aggregate Roots and Invariants](./aggregates_and_invariants.md)
+- [Domain Services](./domain_services.md)
+- [Transactional Mutations](./transactional_mutations.md)
 

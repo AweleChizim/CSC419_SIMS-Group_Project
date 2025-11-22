@@ -192,7 +192,7 @@ import {
   InvariantViolationError,
   NotFoundError,
   ValidationError
-} from "../lib/aggregates";
+} from "../convex/lib/aggregates";
 
 try {
   await enrollStudent({ studentId, sectionId });
@@ -238,7 +238,7 @@ These mutations use domain services for complex business logic:
 - **GraduationService**: Degree audit, requirement validation
 - **AuditLogService**: Audit trail creation
 
-See `../lib/services/` for service implementations.
+See [Domain Services](./domain_services.md) for service implementations.
 
 ## Testing
 
@@ -255,4 +255,9 @@ Each mutation should be tested with:
 3. **Create audit logs**: Track all important operations
 4. **Handle errors gracefully**: Return user-friendly error messages
 5. **Test edge cases**: Ensure transactions handle all failure scenarios
+
+## Related Documentation
+
+- [Domain Services](./domain_services.md)
+- [Aggregate Roots and Invariants](./aggregates_and_invariants.md)
 

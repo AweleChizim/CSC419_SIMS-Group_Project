@@ -19,7 +19,7 @@ Domain Services are stateless services that orchestrate operations spanning mult
 
 **Usage:**
 ```typescript
-import { validateEnrollmentDomainChecks } from "./lib/services/enrollmentService";
+import { validateEnrollmentDomainChecks } from "../convex/lib/services/enrollmentService";
 
 // In a mutation
 await validateEnrollmentDomainChecks(ctx.db, studentId, sectionId);
@@ -37,7 +37,7 @@ await validateEnrollmentDomainChecks(ctx.db, studentId, sectionId);
 
 **Usage:**
 ```typescript
-import { computeFinalGrade } from "./lib/services/gradingService";
+import { computeFinalGrade } from "../convex/lib/services/gradingService";
 
 const { finalGrade, finalPercentage } = await computeFinalGrade(ctx.db, enrollmentId);
 ```
@@ -52,7 +52,7 @@ const { finalGrade, finalPercentage } = await computeFinalGrade(ctx.db, enrollme
 
 **Usage:**
 ```typescript
-import { runDegreeAudit } from "./lib/services/graduationService";
+import { runDegreeAudit } from "../convex/lib/services/graduationService";
 
 const auditResult = await runDegreeAudit(ctx.db, studentId);
 if (auditResult.eligible) {
@@ -72,7 +72,7 @@ if (auditResult.eligible) {
 
 **Usage:**
 ```typescript
-import { validateScheduleAssignment } from "./lib/services/schedulingService";
+import { validateScheduleAssignment } from "../convex/lib/services/schedulingService";
 
 await validateScheduleAssignment(
   ctx.db,
@@ -95,7 +95,7 @@ await validateScheduleAssignment(
 
 **Usage:**
 ```typescript
-import { generateOfficialTranscript } from "./lib/services/transcriptService";
+import { generateOfficialTranscript } from "../convex/lib/services/transcriptService";
 
 const transcript = await generateOfficialTranscript(
   ctx.db,
@@ -131,7 +131,7 @@ All significant domain events are logged:
 
 **Usage:**
 ```typescript
-import { logStudentEnrolled } from "./lib/services/auditLogService";
+import { logStudentEnrolled } from "../convex/lib/services/auditLogService";
 
 await logStudentEnrolled(
   ctx.db,
@@ -166,7 +166,6 @@ Each service should have comprehensive unit tests covering:
 
 ## Related Documentation
 
-- [Aggregate Validation Functions](../aggregates/README.md)
-- [Transactional Mutations](../../mutations/README.md)
-- [Aggregate Roots and Invariants](../../../docs/aggregates_and_invariants.md)
+- [Aggregate Roots and Invariants](./aggregates_and_invariants.md)
+- [Transactional Mutations](./transactional_mutations.md)
 
