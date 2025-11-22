@@ -3,6 +3,11 @@
  * 
  * This file demonstrates how to use the aggregate validation functions
  * in Convex mutations. These are examples - adapt them to your needs.
+ * 
+ * For transactional operations that span multiple aggregates, see:
+ * ../mutations/enrollmentMutations.ts
+ * ../mutations/gradeMutations.ts
+ * ../mutations/graduationMutations.ts
  */
 
 import { mutation } from "../_generated/server";
