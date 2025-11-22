@@ -168,7 +168,7 @@ export async function validateUpdateStudent(
         `Invalid student status: '${status}'`
       );
     }
-    validateStatusTransition(student.status, status);
+    validateStatusTransition(student.status as StudentStatus, status);
   }
 
   if (programId) {
@@ -188,6 +188,6 @@ export async function validateStudentCanEnroll(
     throw new NotFoundError("Student", studentId);
   }
 
-  validateCanEnroll(student);
+  validateCanEnroll(student as Student);
 }
 

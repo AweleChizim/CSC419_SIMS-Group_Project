@@ -8,7 +8,7 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { Section, Assessment, ScheduleSlotSpec } from "./types";
+import { Section, Assessment, ScheduleSlotSpec, UserRole } from "./types";
 
 /**
  * Validates enrollment capacity constraint
@@ -29,7 +29,7 @@ export function validateEnrollmentCapacity(
 /**
  * Validates that enrollment count doesn't exceed capacity when enrolling
  */
-export async function validateCanEnroll(
+export async function validateSectionCanEnroll(
   db: DatabaseReader,
   sectionId: Id<"sections">
 ): Promise<void> {
@@ -172,8 +172,8 @@ export async function validateInstructorRole(
     throw new NotFoundError("User", instructorId);
   }
 
-  const validRoles = ["instructor", "professor", "admin", "department_head"];
-  const hasValidRole = user.roles.some((role) => validRoles.includes(role));
+  const validRoles: UserRole[] = ["instructor", "admin", "department_head"];
+  const hasValidRole = (user.roles as UserRole[]).some((role: UserRole) => validRoles.includes(role));
 
   if (!hasValidRole) {
     throw new InvariantViolationError(

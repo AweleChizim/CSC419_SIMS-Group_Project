@@ -14,6 +14,7 @@
  *   }
  * });
  * ```
+ */
 
 // School Aggregate
 export * from "./schoolAggregate";
@@ -47,4 +48,11 @@ export * from "./graduationAggregate";
 
 // Types
 export * from "./types";
+
+// Errors
+export {
+  InvariantViolationError,
+  NotFoundError,
+  ValidationError,
+} from "../errors";
 

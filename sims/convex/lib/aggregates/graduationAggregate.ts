@@ -8,7 +8,7 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { GraduationRecord, Student } from "./types";
+import { GraduationRecord, Student, UserRole, TranscriptEntry } from "./types";
 
 /**
  * Valid roles that can approve graduation
@@ -27,7 +27,7 @@ export async function validateApproverAuthority(
     throw new NotFoundError("User", approverId);
   }
 
-  const hasAuthority = user.roles.some((role) => APPROVER_ROLES.includes(role));
+  const hasAuthority = (user.roles as UserRole[]).some((role: UserRole) => APPROVER_ROLES.includes(role));
 
   if (!hasAuthority) {
     throw new InvariantViolationError(
@@ -49,7 +49,7 @@ export async function validateGraduationStudent(
   if (!student) {
     throw new NotFoundError("Student", studentId);
   }
-  return student;
+  return student as Student;
 }
 
 /**
@@ -122,7 +122,7 @@ export async function validateProgramRequirements(
 
   // Check minimum credits (example: 120)
   const totalCredits = transcript.entries.reduce(
-    (sum, entry) => sum + entry.credits,
+    (sum: number, entry: TranscriptEntry) => sum + entry.credits,
     0
   );
   const minCredits = program.requirements?.minCredits || 120;

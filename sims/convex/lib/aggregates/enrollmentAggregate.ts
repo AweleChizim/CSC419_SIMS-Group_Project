@@ -191,7 +191,7 @@ export async function validateUpdateEnrollment(
       );
     }
 
-    await validateStatusChange(db, enrollment, newStatus, requireAppeal);
+    await validateStatusChange(db, enrollment as Enrollment, newStatus, requireAppeal);
   }
 }
 

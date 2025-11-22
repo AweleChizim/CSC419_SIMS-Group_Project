@@ -101,7 +101,7 @@ export const enrollStudent = mutation({
   },
   handler: async (ctx, args) => {
     // Import enrollment validations
-    const { validateCreateEnrollment, validateCanEnroll } = await import(
+    const { validateCreateEnrollment, validateSectionCanEnroll } = await import(
       "../lib/aggregates"
     );
 
@@ -109,7 +109,7 @@ export const enrollStudent = mutation({
     await validateStudentCanEnroll(ctx.db, args.studentId);
 
     // Validate section has capacity
-    await validateCanEnroll(ctx.db, args.sectionId);
+    await validateSectionCanEnroll(ctx.db, args.sectionId);
 
     // Validate enrollment invariants
     await validateCreateEnrollment(
@@ -153,13 +153,16 @@ export const enrollStudent = mutation({
 function handleDomainErrors(error: unknown): never {
   if (error instanceof InvariantViolationError) {
     // Log for monitoring
-    console.error(`[${error.aggregate}] ${error.invariant}:`, error.message);
+    const invariantError = error as InvariantViolationError;
+    console.error(`[${invariantError.aggregate}] ${invariantError.invariant}:`, invariantError.message);
     // Return user-friendly error
-    throw new Error(`Business rule violation: ${error.message}`);
+    throw new Error(`Business rule violation: ${invariantError.message}`);
   } else if (error instanceof NotFoundError) {
-    throw new Error(`Not found: ${error.message}`);
+    const notFoundError = error as NotFoundError;
+    throw new Error(`Not found: ${notFoundError.message}`);
   } else if (error instanceof ValidationError) {
-    throw new Error(`Validation failed: ${error.message}`);
+    const validationError = error as ValidationError;
+    throw new Error(`Validation failed: ${validationError.message}`);
   }
   // Re-throw unknown errors
   throw error;
