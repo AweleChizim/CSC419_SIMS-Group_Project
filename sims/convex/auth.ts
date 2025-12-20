@@ -10,6 +10,12 @@ import { v } from "convex/values";
 import { NotFoundError, ValidationError } from "./lib/errors";
 import { validateCreateUser } from "./lib/aggregates";
 import { UserRole } from "./lib/aggregates/types";
+import {
+  createSession,
+  validateSessionToken,
+  deleteSessionByToken,
+  deleteAllUserSessions,
+} from "./lib/session";
 
 /**
  * Hash a password using Web Crypto API (PBKDF2)
@@ -145,10 +151,16 @@ export const register = mutation({
       profile: args.profile,
     });
 
+    // Create a session for the newly registered user
+    const token = await createSession(ctx.db, userId);
+
     return {
       success: true,
       userId,
       email: args.email,
+      token,
+      roles: args.roles as UserRole[],
+      profile: args.profile,
     };
   },
 });
@@ -187,13 +199,17 @@ export const login = mutation({
       );
     }
 
-    // Return user data (excluding password)
+    // Create a new session for the authenticated user
+    const token = await createSession(ctx.db, user._id);
+
+    // Return user data (excluding password) with session token
     return {
       success: true,
       userId: user._id,
       email: user.email,
       roles: user.roles,
       profile: user.profile,
+      token,
     };
   },
 });
@@ -231,36 +247,37 @@ export const changePassword = mutation({
  * Get current authenticated user
  * 
  * Returns the currently authenticated user based on the session token.
- * This uses a session-based approach where the client provides a user ID.
- * 
- * Note: In production, you should use Convex's built-in auth or implement
- * a proper session token validation system.
+ * Validates the session token and returns user information if valid.
  */
 export const getCurrentUser = query({
   args: {
-    userId: v.optional(v.id("users")),
+    token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // If userId is provided, return that user
-    // In a real implementation, you would validate a session token here
-    if (args.userId) {
-      const user = await ctx.db.get(args.userId);
-      
-      if (!user) {
-        return null;
-      }
-
-      // Return user data (excluding password)
-      return {
-        _id: user._id,
-        email: user.email,
-        roles: user.roles,
-        profile: user.profile,
-      };
+    // Validate session token
+    if (!args.token) {
+      return null;
     }
 
-    // No user ID provided, return null
-    return null;
+    const userId = await validateSessionToken(ctx.db, args.token);
+    
+    if (!userId) {
+      return null;
+    }
+
+    const user = await ctx.db.get(userId);
+    
+    if (!user) {
+      return null;
+    }
+
+    // Return user data (excluding password)
+    return {
+      _id: user._id,
+      email: user.email,
+      roles: user.roles,
+      profile: user.profile,
+    };
   },
 });
 
@@ -325,6 +342,24 @@ export const resetPassword = mutation({
     const hashedPassword = await hashPassword(args.newPassword);
     await ctx.db.patch(user._id, { hashedPassword });
 
+    // Invalidate all existing sessions for security
+    await deleteAllUserSessions(ctx.db, user._id);
+
+    return { success: true };
+  },
+});
+
+/**
+ * Logout - invalidate session token
+ * 
+ * Deletes the session associated with the provided token.
+ */
+export const logout = mutation({
+  args: {
+    token: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await deleteSessionByToken(ctx.db, args.token);
     return { success: true };
   },
 });

@@ -317,5 +317,20 @@ export default defineSchema({
     .index("by_entity", ["entity"])
     .index("by_timestamp", ["timestamp"])
     .index("by_entity_action", ["entity", "action"]),
+
+  /**
+   * Sessions Collection
+   * Represents user authentication sessions with secure tokens
+   * Foreign Keys: userId → users._id
+   */
+  sessions: defineTable({
+    userId: v.id("users"),
+    token: v.string(), // Secure session token
+    expiresAt: v.number(), // Unix timestamp when session expires
+    createdAt: v.number(), // Unix timestamp when session was created
+  })
+    .index("by_token", ["token"])
+    .index("by_userId", ["userId"])
+    .index("by_expiresAt", ["expiresAt"]),
 });
 

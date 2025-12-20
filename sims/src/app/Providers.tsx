@@ -3,7 +3,7 @@
 import React from "react";
 import { ConvexProvider } from "convex/react";
 import { convex } from "@/lib/convex";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 interface ProvidersProps {
   children: React.ReactNode;

@@ -5,7 +5,7 @@
  * This is a convenience wrapper around the AuthContext.
  */
 
-import { useAuth as useAuthContext } from "../contexts/AuthContext";
+import { useAuth as useAuthContext } from "../context/AuthContext";
 
 /**
  * Main authentication hook

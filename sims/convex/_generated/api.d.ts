@@ -30,6 +30,7 @@ import type * as lib_services_graduationService from "../lib/services/graduation
 import type * as lib_services_index from "../lib/services/index.js";
 import type * as lib_services_schedulingService from "../lib/services/schedulingService.js";
 import type * as lib_services_transcriptService from "../lib/services/transcriptService.js";
+import type * as lib_session from "../lib/session.js";
 import type * as mutations_assessmentMutations from "../mutations/assessmentMutations.js";
 import type * as mutations_courseMutations from "../mutations/courseMutations.js";
 import type * as mutations_enrollmentMutations from "../mutations/enrollmentMutations.js";
@@ -70,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   "lib/services/index": typeof lib_services_index;
   "lib/services/schedulingService": typeof lib_services_schedulingService;
   "lib/services/transcriptService": typeof lib_services_transcriptService;
+  "lib/session": typeof lib_session;
   "mutations/assessmentMutations": typeof mutations_assessmentMutations;
   "mutations/courseMutations": typeof mutations_courseMutations;
   "mutations/enrollmentMutations": typeof mutations_enrollmentMutations;

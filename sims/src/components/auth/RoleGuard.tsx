@@ -10,7 +10,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../hooks/useAuth";
 import { useHasRole, useHasAnyRole, useHasAllRoles } from "../../hooks/useHasRole";
-import { UserRole } from "../../../convex/_generated/api";
+import { UserRole } from "../../../convex/lib/aggregates/types";
 import Loading from "../loading/Loading";
 
 interface RoleGuardProps {

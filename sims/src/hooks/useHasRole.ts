@@ -6,7 +6,7 @@
  */
 
 import { useAuth } from "./useAuth";
-import { UserRole } from "../../convex/_generated/api";
+import { UserRole } from "../../convex/lib/aggregates/types";
 
 /**
  * Check if the current user has a specific role

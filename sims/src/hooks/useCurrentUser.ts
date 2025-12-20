@@ -6,7 +6,7 @@
  */
 
 import { useAuth } from "./useAuth";
-import { User } from "../contexts/AuthContext";
+import { User } from "../context/AuthContext";
 
 /**
  * Hook to get the current authenticated user
