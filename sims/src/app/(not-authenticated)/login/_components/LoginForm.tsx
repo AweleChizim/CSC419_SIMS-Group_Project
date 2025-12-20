@@ -16,21 +16,6 @@ interface LoginFormProps {
   redirectTo?: string;
 }
 
-
-/**
- * LoginForm - Login form with role-based access
- * 
- * @param onSuccess - Callback function called after successful login
- * @param redirectTo - Path to redirect to after login (default: role-based redirect)
- * 
- * @example
- * ```tsx
- * <LoginForm 
- *   onSuccess={() => console.log("Logged in!")}
- *   redirectTo="/dashboard"
- * />
- * ```
- */
 export function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
