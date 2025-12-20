@@ -1,9 +1,3 @@
-/**
- * Unauthorized Page
- * 
- * Shown when a user tries to access a resource they don't have permission for.
- */
-
 "use client";
 
 import { useRouter } from "next/navigation";

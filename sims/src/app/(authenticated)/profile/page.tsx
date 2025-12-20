@@ -1,9 +1,3 @@
-/**
- * Profile Page
- * 
- * User profile management page with profile update and password change forms.
- */
-
 "use client";
 
 import { useState } from "react";
@@ -29,14 +23,12 @@ export default function ProfilePage() {
     <div>
         <PageBreadCrumb pageTitle="My Profile" />
 
-        {/* Success Message */}
         {showSuccessMessage && (
           <div className="mb-6">
             <Alert variant="success" title="Success" message="Profile updated successfully!" />
           </div>
         )}
 
-        {/* Tabs */}
         <Tabs justifyTabs="left" tabStyle="independent">
           <TabPane tab="Profile Information">
             <div className="space-y-6">

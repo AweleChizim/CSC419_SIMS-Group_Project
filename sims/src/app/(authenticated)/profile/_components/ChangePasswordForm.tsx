@@ -51,7 +51,6 @@ export function ChangePasswordForm({ onSuccess, onCancel }: ChangePasswordFormPr
     }
   };
 
-  // Validate form
   const validate = (): boolean => {
     const errors: {
       currentPassword?: string;
@@ -83,7 +82,6 @@ export function ChangePasswordForm({ onSuccess, onCancel }: ChangePasswordFormPr
     return Object.keys(errors).length === 0;
   };
 
-  // Handle form submission
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -103,12 +101,10 @@ export function ChangePasswordForm({ onSuccess, onCancel }: ChangePasswordFormPr
       });
 
       if (result.success) {
-        // Clear form
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
 
-        // Call success callback
         if (onSuccess) {
           onSuccess();
         }

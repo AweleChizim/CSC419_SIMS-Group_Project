@@ -33,7 +33,6 @@ export function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
   const { login } = useAuth();
   const router = useRouter();
 
-  // Validate form
   const validate = (): boolean => {
     const errors: { email?: string; password?: string } = {};
 
@@ -65,7 +64,6 @@ export function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -81,24 +79,20 @@ export function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
       const result = await login(email, password);
 
       if (result.success) {
-        // Determine redirect path based on returned user roles or provided redirectTo
         let redirectPath = redirectTo;
 
         if (!redirectPath && result.user?.roles) {
           redirectPath = getDefaultRoute(result.user.roles as UserRole[]);
         }
 
-        // Ensure we have a redirect path (fallback to profile)
         if (!redirectPath) {
           redirectPath = "/profile";
         }
 
-        // Call success callback
         if (onSuccess) {
           onSuccess();
         }
 
-        // Redirect
         router.push(redirectPath);
       } else {
         setApiError(result.error || "Login failed. Please check your credentials.");

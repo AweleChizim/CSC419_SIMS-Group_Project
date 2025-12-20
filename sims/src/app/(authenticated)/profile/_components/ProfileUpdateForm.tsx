@@ -15,20 +15,6 @@ interface ProfileUpdateFormProps {
   onCancel?: () => void;
 }
 
-/**
- * ProfileUpdateForm - Form for updating user profile
- * 
- * @param onSuccess - Callback function called after successful update
- * @param onCancel - Callback function called when user cancels
- * 
- * @example
- * ```tsx
- * <ProfileUpdateForm 
- *   onSuccess={() => console.log("Profile updated!")}
- *   onCancel={() => setEditing(false)}
- * />
- * ```
- */
 export function ProfileUpdateForm({ onSuccess, onCancel }: ProfileUpdateFormProps) {
   const currentUser = useCurrentUser();
   const updateProfileMutation = useMutation(api.users.updateProfile);
@@ -43,7 +29,6 @@ export function ProfileUpdateForm({ onSuccess, onCancel }: ProfileUpdateFormProp
     lastName?: string;
   }>({});
 
-  // Initialize form with current user data
   useEffect(() => {
     if (currentUser) {
       setFirstName(currentUser.profile.firstName || "");
@@ -52,7 +37,6 @@ export function ProfileUpdateForm({ onSuccess, onCancel }: ProfileUpdateFormProp
     }
   }, [currentUser]);
 
-  // Validate form
   const validate = (): boolean => {
     const errors: { firstName?: string; lastName?: string } = {};
 
@@ -85,7 +69,6 @@ export function ProfileUpdateForm({ onSuccess, onCancel }: ProfileUpdateFormProp
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -108,7 +91,6 @@ export function ProfileUpdateForm({ onSuccess, onCancel }: ProfileUpdateFormProp
       });
 
       if (result.success) {
-        // Call success callback
         if (onSuccess) {
           onSuccess();
         }

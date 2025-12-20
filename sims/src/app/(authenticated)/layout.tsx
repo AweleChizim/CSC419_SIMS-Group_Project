@@ -24,12 +24,10 @@ export default function AdminLayout({
   const { user: authUser, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
-    // Wait for auth to finish loading
     if (isLoading) {
       return;
     }
 
-    // If not authenticated, redirect to login
     if (!isAuthenticated || !authUser) {
       router.push(
         "/login?errorTitle=Session Expired&errorMessage=You've been logged out automatically. Please re-authenticate."
@@ -37,14 +35,12 @@ export default function AdminLayout({
       return;
     }
 
-    // Set user in store
     const user = getUser(authUser);
     if (user) {
       setUser(user);
     }
   }, [pathname, setUser, router, authUser, isAuthenticated, isLoading]);
 
-  // Show loading state while checking authentication
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -53,12 +49,10 @@ export default function AdminLayout({
     );
   }
 
-  // Don't render layout if not authenticated (will redirect)
   if (!isAuthenticated || !authUser) {
     return null;
   }
 
-  // Dynamic class for main content margin based on sidebar state
   const mainContentMargin = isMobileOpen
     ? 'ml-0'
     : isExpanded || isHovered
@@ -67,16 +61,12 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen xl:flex">
-      {/* Sidebar and Backdrop */}
       <AppSidebar />
       <Backdrop />
-      {/* Main Content Area */}
       <div
         className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
       >
-        {/* Header */}
         <AppHeader />
-        {/* Page Content */}
         <div className="mx-auto max-w-7xl p-4 md:p-6">
           {children}
         </div>

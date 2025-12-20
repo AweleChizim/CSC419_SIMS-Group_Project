@@ -12,7 +12,6 @@ export default function LoginPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
       const defaultRoute = getDefaultRoute(user.roles);
@@ -20,7 +19,6 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, isLoading, user, router]);
 
-  // Show loading while checking authentication
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -29,7 +27,6 @@ export default function LoginPage() {
     );
   }
 
-  // Don't show login form if already authenticated (will redirect)
   if (isAuthenticated) {
     return null;
   }

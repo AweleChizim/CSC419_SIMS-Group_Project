@@ -1,9 +1,3 @@
-/**
- * Reset Password Page
- *
- * Uses a placeholder token flow. In dev, use token: "dev-reset-token".
- */
-
 "use client";
 
 import { useSearchParams } from "next/navigation";
