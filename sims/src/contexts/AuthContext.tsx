@@ -31,7 +31,7 @@ interface AuthContextType {
   user: User | null;
   
   // Authentication methods
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   logout: () => Promise<void>;
   register: (data: {
     username: string;
@@ -77,6 +77,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     storedUserId ? { userId: storedUserId } : "skip"
   );
   
+  // If there is no stored user ID, we know the user is unauthenticated.
+  // Ensure state reflects that (avoid staying stuck in loading).
+  useEffect(() => {
+    if (storedUserId === null) {
+      setIsAuthenticated(false);
+      setUser(null);
+    }
+  }, [storedUserId]);
+
   // Mutations
   const loginMutation = useMutation(api.auth.login);
   const registerMutation = useMutation(api.auth.register);
@@ -108,7 +117,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = useCallback(async (
     username: string,
     password: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; error?: string; user?: User }> => {
     try {
       const result = await loginMutation({ username, password });
       
@@ -119,7 +128,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
         setStoredUserId(result.userId);
         
-        // The user will be updated via the getCurrentUser query
+        // Update auth state immediately with returned user to avoid waiting for the follow-up query
+        if (result.userId && result.username) {
+          const userObj: User = {
+            _id: result.userId,
+            username: result.username,
+            roles: result.roles ?? [],
+            profile: result.profile ?? { firstName: "", lastName: "" },
+          };
+          setIsAuthenticated(true);
+          setUser(userObj);
+          return { success: true, user: userObj };
+        }
+
+        // Fallback
         return { success: true };
       }
       
@@ -186,7 +208,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return roles.every(role => user.roles.includes(role));
   }, [user]);
 
-  const isLoading = currentUser === undefined;
+  // Consider ourselves not loading if we didn't query (no stored user id).
+  const isLoading = storedUserId === null ? false : currentUser === undefined;
 
   const value: AuthContextType = {
     isAuthenticated,

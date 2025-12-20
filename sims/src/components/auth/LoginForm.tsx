@@ -13,7 +13,6 @@ import { useAuth } from "../../hooks/useAuth";
 import Input from "../form/input/InputField";
 import Button from "../ui/button/Button";
 import Label from "../form/Label";
-import Select from "../form/Select";
 import Loading from "../loading/Loading";
 
 interface LoginFormProps {
@@ -21,13 +20,6 @@ interface LoginFormProps {
   redirectTo?: string;
 }
 
-type UserRoleOption = "student" | "instructor" | "admin";
-
-const ROLE_OPTIONS: { value: UserRoleOption; label: string }[] = [
-  { value: "student", label: "Student" },
-  { value: "instructor", label: "Instructor" },
-  { value: "admin", label: "Admin" },
-];
 
 /**
  * LoginForm - Login form with role-based access
@@ -46,7 +38,6 @@ const ROLE_OPTIONS: { value: UserRoleOption; label: string }[] = [
 export function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedRole, setSelectedRole] = useState<UserRoleOption>("student");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<{
@@ -92,23 +83,20 @@ export function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
       const result = await login(username, password);
 
       if (result.success) {
-        // Determine redirect path based on role or provided redirectTo
+        // Determine redirect path based on returned user roles or provided redirectTo
         let redirectPath = redirectTo;
-        
+
+        const userRoles = result.user?.roles ?? [];
+
         if (!redirectPath) {
-          // Role-based redirect
-          switch (selectedRole) {
-            case "student":
-              redirectPath = "/dashboard/student";
-              break;
-            case "instructor":
-              redirectPath = "/dashboard/instructor";
-              break;
-            case "admin":
-              redirectPath = "/dashboard/admin";
-              break;
-            default:
-              redirectPath = "/dashboard";
+          if (userRoles.includes("admin")) {
+            redirectPath = "/dashboard/admin";
+          } else if (userRoles.includes("instructor")) {
+            redirectPath = "/dashboard/instructor";
+          } else if (userRoles.includes("student")) {
+            redirectPath = "/dashboard/student";
+          } else {
+            redirectPath = "/dashboard";
           }
         }
 
@@ -132,22 +120,6 @@ export function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
   return (
     <div className="w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Role Selection */}
-        <div>
-          <Label htmlFor="role" className="mb-2 block">
-            Login As
-          </Label>
-          <Select
-            defaultValue={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value as UserRoleOption)}
-            options={ROLE_OPTIONS.map((opt) => ({
-              value: opt.value,
-              label: opt.label,
-            }))}
-            className="w-full"
-          />
-        </div>
-
         {/* Username Field */}
         <div>
           <Label htmlFor="username" className="mb-2 block">

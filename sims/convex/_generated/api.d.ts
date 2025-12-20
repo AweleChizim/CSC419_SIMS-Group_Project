@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
 import type * as examples_studentMutations from "../examples/studentMutations.js";
 import type * as lib_aggregates_academicCalendarAggregate from "../lib/aggregates/academicCalendarAggregate.js";
 import type * as lib_aggregates_courseAggregate from "../lib/aggregates/courseAggregate.js";
@@ -38,6 +39,7 @@ import type * as mutations_programMutations from "../mutations/programMutations.
 import type * as mutations_sectionMutations from "../mutations/sectionMutations.js";
 import type * as mutations_transcriptMutations from "../mutations/transcriptMutations.js";
 import type * as mutations_userMutations from "../mutations/userMutations.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -46,6 +48,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
   "examples/studentMutations": typeof examples_studentMutations;
   "lib/aggregates/academicCalendarAggregate": typeof lib_aggregates_academicCalendarAggregate;
   "lib/aggregates/courseAggregate": typeof lib_aggregates_courseAggregate;
@@ -76,6 +79,7 @@ declare const fullApi: ApiFromModules<{
   "mutations/sectionMutations": typeof mutations_sectionMutations;
   "mutations/transcriptMutations": typeof mutations_transcriptMutations;
   "mutations/userMutations": typeof mutations_userMutations;
+  users: typeof users;
 }>;
 
 /**
