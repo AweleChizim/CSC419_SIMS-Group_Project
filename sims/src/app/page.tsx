@@ -1,5 +1,5 @@
 import Image from "next/image";
-import RequireAuth from "../components/auth/RequireAuth";
+import RequireAuth from "@/components/auth/RequireAuth";
 
 export default function Home() {
   return (

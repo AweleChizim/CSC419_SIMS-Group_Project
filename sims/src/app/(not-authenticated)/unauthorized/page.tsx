@@ -7,8 +7,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Button from "../../components/ui/button/Button";
-import { useAuth } from "../../hooks/useAuth";
+import Button from "@/components/ui/button/Button";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function UnauthorizedPage() {
   const router = useRouter();

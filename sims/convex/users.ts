@@ -28,7 +28,7 @@ export const getUserById = query({
 
     return {
       _id: user._id,
-      username: user.username,
+      email: user.email,
       roles: user.roles,
       profile: user.profile,
     };
@@ -36,16 +36,16 @@ export const getUserById = query({
 });
 
 /**
- * Get user by username (without password)
+ * Get user by email (without password)
  */
-export const getUserByUsername = query({
+export const getUserByEmail = query({
   args: {
-    username: v.string(),
+    email: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
 
     if (!user) {
@@ -54,7 +54,7 @@ export const getUserByUsername = query({
 
     return {
       _id: user._id,
-      username: user.username,
+      email: user.email,
       roles: user.roles,
       profile: user.profile,
     };
@@ -90,7 +90,7 @@ export const updateProfile = mutation({
     await validateUpdateUser(
       ctx.db,
       args.userId,
-      undefined, // username
+      undefined, // email
       undefined, // hashedPassword
       undefined, // roles
       updatedProfile
@@ -116,7 +116,7 @@ export const getAllUsers = query({
     const users = await ctx.db.query("users").collect();
     return users.map((user) => ({
       _id: user._id,
-      username: user.username,
+      email: user.email,
       roles: user.roles,
       profile: user.profile,
     }));
@@ -124,16 +124,16 @@ export const getAllUsers = query({
 });
 
 /**
- * Check if username is available
+ * Check if email is available
  */
-export const checkUsernameAvailability = query({
+export const checkEmailAvailability = query({
   args: {
-    username: v.string(),
+    email: v.string(),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
 
     return {
@@ -158,7 +158,7 @@ export const getUsersByRole = query({
 
     return usersWithRole.map((user) => ({
       _id: user._id,
-      username: user.username,
+      email: user.email,
       roles: user.roles,
       profile: user.profile,
     }));

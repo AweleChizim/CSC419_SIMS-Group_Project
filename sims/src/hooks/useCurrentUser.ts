@@ -25,7 +25,7 @@ import { User } from "../contexts/AuthContext";
  *   return (
  *     <div>
  *       <h1>{user.profile.firstName} {user.profile.lastName}</h1>
- *       <p>Username: {user.username}</p>
+ *       <p>Email: {user.email}</p>
  *       <p>Roles: {user.roles.join(", ")}</p>
  *     </div>
  *   );

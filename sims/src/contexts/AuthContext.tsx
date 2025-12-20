@@ -15,7 +15,7 @@ import { UserRole } from "../../convex/_generated/api";
 
 export interface User {
   _id: Id<"users">;
-  username: string;
+  email: string;
   roles: UserRole[];
   profile: {
     firstName: string;
@@ -31,10 +31,10 @@ interface AuthContextType {
   user: User | null;
   
   // Authentication methods
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   logout: () => Promise<void>;
   register: (data: {
-    username: string;
+    email: string;
     password: string;
     roles: string[];
     profile: {
@@ -115,11 +115,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Login function
   const login = useCallback(async (
-    username: string,
+    email: string,
     password: string
   ): Promise<{ success: boolean; error?: string; user?: User }> => {
     try {
-      const result = await loginMutation({ username, password });
+      const result = await loginMutation({ email, password });
       
       if (result.success) {
         // Store user ID for session management
@@ -129,10 +129,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setStoredUserId(result.userId);
         
         // Update auth state immediately with returned user to avoid waiting for the follow-up query
-        if (result.userId && result.username) {
+        if (result.userId && result.email) {
           const userObj: User = {
             _id: result.userId,
-            username: result.username,
+            email: result.email,
             roles: result.roles ?? [],
             profile: result.profile ?? { firstName: "", lastName: "" },
           };
@@ -169,7 +169,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Register function
   const register = useCallback(async (data: {
-    username: string;
+    email: string;
     password: string;
     roles: string[];
     profile: {
@@ -183,7 +183,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       if (result.success) {
         // Automatically log in after registration
-        return await login(data.username, data.password);
+        return await login(data.email, data.password);
       }
       
       return { success: false, error: "Registration failed" };

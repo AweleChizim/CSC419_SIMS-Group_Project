@@ -7,10 +7,11 @@
 "use client";
 
 import { useState } from "react";
-import { ProtectedRoute } from "../../components/auth/ProtectedRoute";
-import { useCurrentUser } from "../../hooks/useCurrentUser";
-import { ProfileUpdateForm } from "../../components/auth/ProfileUpdateForm";
-import { ChangePasswordForm } from "../../components/auth/ChangePasswordForm";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { ProfileUpdateForm } from "./_components/ProfileUpdateForm";
+import { ChangePasswordForm } from "./_components/ChangePasswordForm";
+import Alert from "@/components/ui/alert/Alert";
 
 export default function ProfilePage() {
   const user = useCurrentUser();
@@ -38,10 +39,8 @@ export default function ProfilePage() {
 
           {/* Success Message */}
           {showSuccessMessage && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800">
-              <p className="text-sm text-green-600 dark:text-green-400">
-                Profile updated successfully!
-              </p>
+            <div className="mb-6">
+              <Alert variant="success" title="Success" message="Profile updated successfully!" />
             </div>
           )}
 
@@ -53,8 +52,8 @@ export default function ProfilePage() {
               </h2>
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Username</p>
-                  <p className="text-gray-900 dark:text-white font-medium">{user.username}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
+                  <p className="text-gray-900 dark:text-white font-medium">{user.email}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Full Name</p>

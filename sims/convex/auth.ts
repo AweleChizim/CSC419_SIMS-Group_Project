@@ -102,7 +102,7 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
  */
 export const register = mutation({
   args: {
-    username: v.string(),
+    email: v.string(),
     password: v.string(),
     roles: v.array(v.string()),
     profile: v.object({
@@ -112,16 +112,16 @@ export const register = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    // Check if username already exists
+    // Check if email already exists
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
 
     if (existingUser) {
       throw new ValidationError(
-        "username",
-        "Username already exists"
+        "email",
+        "Email already exists"
       );
     }
 
@@ -131,7 +131,7 @@ export const register = mutation({
     // Validate user creation invariants
     await validateCreateUser(
       ctx.db,
-      args.username,
+      args.email,
       hashedPassword,
       args.roles,
       args.profile
@@ -139,7 +139,7 @@ export const register = mutation({
 
     // Create the user
     const userId = await ctx.db.insert("users", {
-      username: args.username,
+      email: args.email,
       hashedPassword,
       roles: args.roles as UserRole[],
       profile: args.profile,
@@ -148,30 +148,30 @@ export const register = mutation({
     return {
       success: true,
       userId,
-      username: args.username,
+      email: args.email,
     };
   },
 });
 
 /**
- * Login with username and password
+ * Login with email and password
  * 
  * Authenticates a user and returns user information if credentials are valid.
  */
 export const login = mutation({
   args: {
-    username: v.string(),
+    email: v.string(),
     password: v.string(),
   },
   handler: async (ctx, args) => {
-    // Find user by username
+    // Find user by email
     const user = await ctx.db
       .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
 
     if (!user) {
-      throw new NotFoundError("User", args.username);
+      throw new NotFoundError("User", args.email);
     }
 
     // Verify password
@@ -183,7 +183,7 @@ export const login = mutation({
     if (!isValidPassword) {
       throw new ValidationError(
         "password",
-        "Invalid username or password"
+        "Invalid email or password"
       );
     }
 
@@ -191,7 +191,7 @@ export const login = mutation({
     return {
       success: true,
       userId: user._id,
-      username: user.username,
+      email: user.email,
       roles: user.roles,
       profile: user.profile,
     };
@@ -253,7 +253,7 @@ export const getCurrentUser = query({
       // Return user data (excluding password)
       return {
         _id: user._id,
-        username: user.username,
+        email: user.email,
         roles: user.roles,
         profile: user.profile,
       };
@@ -272,12 +272,12 @@ export const getCurrentUser = query({
  */
 export const requestPasswordReset = mutation({
   args: {
-    username: v.string(),
+    username: v.string(), // Keep for backward compatibility, but it's actually email
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .withIndex("by_email", (q) => q.eq("email", args.username))
       .first();
 
     // Do not leak existence
@@ -303,7 +303,7 @@ export const requestPasswordReset = mutation({
  */
 export const resetPassword = mutation({
   args: {
-    username: v.string(),
+    username: v.string(), // Keep for backward compatibility, but it's actually email
     resetToken: v.string(),
     newPassword: v.string(),
   },
@@ -315,7 +315,7 @@ export const resetPassword = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .withIndex("by_email", (q) => q.eq("email", args.username))
       .first();
 
     if (!user) {
