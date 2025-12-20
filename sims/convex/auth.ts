@@ -1,0 +1,237 @@
+/**
+ * Authentication Functions
+ * 
+ * Handles user authentication including login, logout, and session management.
+ * Uses password hashing with Web Crypto API (compatible with Convex environment).
+ */
+
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+import { NotFoundError, ValidationError } from "./lib/errors";
+import { validateCreateUser } from "./lib/aggregates";
+import { UserRole } from "./lib/aggregates/types";
+
+/**
+ * Hash a password using Web Crypto API (PBKDF2)
+ * This is compatible with Convex's server environment
+ */
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  
+  const key = await crypto.subtle.importKey(
+    "raw",
+    data,
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
+  
+  const hash = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    key,
+    256
+  );
+  
+  const hashArray = Array.from(new Uint8Array(hash));
+  const saltArray = Array.from(salt);
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  const saltHex = saltArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  
+  // Return in format: $pbkdf2$iterations$salt$hash
+  return `$pbkdf2$100000$${saltHex}$${hashHex}`;
+}
+
+/**
+ * Verify a password against a hash
+ */
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  // Parse the hash format: $pbkdf2$iterations$salt$hash
+  const parts = hash.split("$");
+  if (parts.length !== 5 || parts[1] !== "pbkdf2") {
+    return false;
+  }
+  
+  const iterations = parseInt(parts[2], 10);
+  const saltHex = parts[3];
+  const hashHex = parts[4];
+  
+  const salt = new Uint8Array(
+    saltHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
+  );
+  
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  
+  const key = await crypto.subtle.importKey(
+    "raw",
+    data,
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
+  
+  const derivedHash = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: iterations,
+      hash: "SHA-256",
+    },
+    key,
+    256
+  );
+  
+  const derivedHashArray = Array.from(new Uint8Array(derivedHash));
+  const derivedHashHex = derivedHashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  
+  return derivedHashHex === hashHex;
+}
+
+/**
+ * Register a new user
+ * 
+ * Creates a new user account with hashed password and profile information.
+ * Validates all user invariants before creation.
+ */
+export const register = mutation({
+  args: {
+    username: v.string(),
+    password: v.string(),
+    roles: v.array(v.string()),
+    profile: v.object({
+      firstName: v.string(),
+      middleName: v.optional(v.string()),
+      lastName: v.string(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    // Check if username already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+
+    if (existingUser) {
+      throw new ValidationError(
+        "username",
+        "Username already exists"
+      );
+    }
+
+    // Hash the password
+    const hashedPassword = await hashPassword(args.password);
+
+    // Validate user creation invariants
+    await validateCreateUser(
+      ctx.db,
+      args.username,
+      hashedPassword,
+      args.roles,
+      args.profile
+    );
+
+    // Create the user
+    const userId = await ctx.db.insert("users", {
+      username: args.username,
+      hashedPassword,
+      roles: args.roles as UserRole[],
+      profile: args.profile,
+    });
+
+    return {
+      success: true,
+      userId,
+      username: args.username,
+    };
+  },
+});
+
+/**
+ * Login with username and password
+ * 
+ * Authenticates a user and returns user information if credentials are valid.
+ */
+export const login = mutation({
+  args: {
+    username: v.string(),
+    password: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Find user by username
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+
+    if (!user) {
+      throw new NotFoundError("User", args.username);
+    }
+
+    // Verify password
+    const isValidPassword = await verifyPassword(
+      args.password,
+      user.hashedPassword
+    );
+
+    if (!isValidPassword) {
+      throw new ValidationError(
+        "password",
+        "Invalid username or password"
+      );
+    }
+
+    // Return user data (excluding password)
+    return {
+      success: true,
+      userId: user._id,
+      username: user.username,
+      roles: user.roles,
+      profile: user.profile,
+    };
+  },
+});
+
+/**
+ * Get current authenticated user
+ * 
+ * Returns the currently authenticated user based on the session token.
+ * This uses a session-based approach where the client provides a user ID.
+ * 
+ * Note: In production, you should use Convex's built-in auth or implement
+ * a proper session token validation system.
+ */
+export const getCurrentUser = query({
+  args: {
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    // If userId is provided, return that user
+    // In a real implementation, you would validate a session token here
+    if (args.userId) {
+      const user = await ctx.db.get(args.userId);
+      
+      if (!user) {
+        return null;
+      }
+
+      // Return user data (excluding password)
+      return {
+        _id: user._id,
+        username: user.username,
+        roles: user.roles,
+        profile: user.profile,
+      };
+    }
+
+    // No user ID provided, return null
+    return null;
+  },
+});
+
