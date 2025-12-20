@@ -40,9 +40,9 @@ export default function UnauthorizedPage() {
           </Button>
           <Button
             variant="primary"
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/profile")}
           >
-            Go to Dashboard
+            Go to Profile
           </Button>
         </div>
       </div>

@@ -32,14 +32,17 @@ export function ProtectedRoute({
     }
   }, [isAuthenticated, isLoading, router, redirectTo]);
 
+  // If authenticated, show content even if still loading user details
+  if (isAuthenticated) {
+    return <>{children}</>;
+  }
+
+  // Show loading state while checking authentication
   if (isLoading) {
     return fallback ?? <Loading />;
   }
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  return <>{children}</>;
+  // Not authenticated and not loading - will redirect via useEffect
+  return null;
 }
 

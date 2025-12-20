@@ -1,9 +1,3 @@
-/**
- * Login Page
- * 
- * Login page with role-based form for student, instructor, and admin access.
- */
-
 "use client";
 
 import { useEffect } from "react";
@@ -12,17 +6,19 @@ import { useAuth } from "@/hooks/useAuth";
 import { LoginForm } from "./_components/LoginForm";
 import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import Loading from "@/components/loading/Loading";
+import { getDefaultRoute } from "@/utils/getDefaultRoute";
 
 export default function LoginPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push("/dashboard");
+    if (!isLoading && isAuthenticated && user) {
+      const defaultRoute = getDefaultRoute(user.roles);
+      router.push(defaultRoute);
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, user, router]);
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -59,4 +55,3 @@ export default function LoginPage() {
     </AuthPageLayout>
   );
 }
-

@@ -10,6 +10,8 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import Alert from "@/components/ui/alert/Alert";
 import { EyeCloseIcon, EyeIcon } from '@/icons';
+import { getDefaultRoute } from "@/utils/getDefaultRoute";
+import { UserRole } from "../../../../../convex/lib/aggregates/types";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -82,18 +84,13 @@ export function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
         // Determine redirect path based on returned user roles or provided redirectTo
         let redirectPath = redirectTo;
 
-        const userRoles = result.user?.roles ?? [];
+        if (!redirectPath && result.user?.roles) {
+          redirectPath = getDefaultRoute(result.user.roles as UserRole[]);
+        }
 
+        // Ensure we have a redirect path (fallback to profile)
         if (!redirectPath) {
-          if (userRoles.includes("admin")) {
-            redirectPath = "/dashboard/admin";
-          } else if (userRoles.includes("instructor")) {
-            redirectPath = "/dashboard/instructor";
-          } else if (userRoles.includes("student")) {
-            redirectPath = "/dashboard/student";
-          } else {
-            redirectPath = "/dashboard";
-          }
+          redirectPath = "/profile";
         }
 
         // Call success callback

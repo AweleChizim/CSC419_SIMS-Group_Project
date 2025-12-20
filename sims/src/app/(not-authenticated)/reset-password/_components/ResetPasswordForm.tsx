@@ -1,9 +1,3 @@
-/**
- * ResetPasswordForm Component
- *
- * Resets password using a reset token (placeholder flow).
- */
-
 "use client";
 
 import { useState, FormEvent } from "react";
@@ -13,7 +7,6 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import Alert from "@/components/ui/alert/Alert";
-import Loading from "@/components/loading/Loading";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 
 interface ResetPasswordFormProps {
@@ -227,7 +220,6 @@ export function ResetPasswordForm({ email = "", presetToken = "" }: ResetPasswor
           <Button type="submit" className="w-full" disabled={isLoading} size="full">
             {isLoading ? (
               <span className="flex items-center gap-2">
-                <Loading />
                 Resetting...
               </span>
             ) : (
@@ -239,4 +231,3 @@ export function ResetPasswordForm({ email = "", presetToken = "" }: ResetPasswor
     </form>
   );
 }
-

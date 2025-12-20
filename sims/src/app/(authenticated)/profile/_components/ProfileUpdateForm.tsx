@@ -1,9 +1,3 @@
-/**
- * ProfileUpdateForm Component
- * 
- * Form for updating user profile information (name fields).
- */
-
 "use client";
 
 import { useState, FormEvent, useEffect } from "react";
@@ -14,7 +8,6 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import Alert from "@/components/ui/alert/Alert";
-import Loading from "@/components/loading/Loading";
 import EmptyState from "@/components/empty-state/EmptyState";
 
 interface ProfileUpdateFormProps {
@@ -87,7 +80,7 @@ export function ProfileUpdateForm({ onSuccess, onCancel }: ProfileUpdateFormProp
       setLastName(value);
     }
 
-    if (validationErrors[field]) {
+    if ((field === "firstName" || field === "lastName") && validationErrors[field]) {
       setValidationErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
@@ -142,7 +135,7 @@ export function ProfileUpdateForm({ onSuccess, onCancel }: ProfileUpdateFormProp
   }
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full">
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           {apiError && (
@@ -216,7 +209,6 @@ export function ProfileUpdateForm({ onSuccess, onCancel }: ProfileUpdateFormProp
             <Button type="submit" variant="primary" disabled={isLoading}>
               {isLoading ? (
                 <span className="flex items-center gap-2">
-                  <Loading />
                   Updating...
                 </span>
               ) : (

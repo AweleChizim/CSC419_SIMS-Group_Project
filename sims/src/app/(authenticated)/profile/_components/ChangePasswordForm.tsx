@@ -1,9 +1,3 @@
-/**
- * ChangePasswordForm Component
- * 
- * Form for changing user password.
- */
-
 "use client";
 
 import { useState, FormEvent } from "react";
@@ -14,7 +8,6 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import Alert from "@/components/ui/alert/Alert";
-import Loading from "@/components/loading/Loading";
 import EmptyState from "@/components/empty-state/EmptyState";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 
@@ -23,23 +16,9 @@ interface ChangePasswordFormProps {
   onCancel?: () => void;
 }
 
-/**
- * ChangePasswordForm - Form for changing password
- * 
- * @param onSuccess - Callback function called after successful password change
- * @param onCancel - Callback function called when user cancels
- * 
- * @example
- * ```tsx
- * <ChangePasswordForm 
- *   onSuccess={() => console.log("Password changed!")}
- *   onCancel={() => setEditing(false)}
- * />
- * ```
- */
 export function ChangePasswordForm({ onSuccess, onCancel }: ChangePasswordFormProps) {
   const currentUser = useCurrentUser();
-  const changePasswordMutation = useMutation(api.auth.changePasswordWithUserId);
+  const changePasswordMutation = useMutation(api.auth.changePassword);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -278,7 +257,6 @@ export function ChangePasswordForm({ onSuccess, onCancel }: ChangePasswordFormPr
             <Button type="submit" variant="primary" disabled={isLoading}>
               {isLoading ? (
                 <span className="flex items-center gap-2">
-                  <Loading />
                   Changing...
                 </span>
               ) : (
