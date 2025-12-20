@@ -3,7 +3,7 @@ import React from 'react';
 import { useModal } from '../../hooks/useModal';
 import { Modal } from '../ui/modal';
 import { User } from '@/context/AuthContext';
-import { ProfileUpdateForm } from '@/app/(authenticated)/profile/_components/ProfileUpdateForm';
+import { ProfileUpdateForm } from '@/app/(authenticated)/account-settings/_components/ProfileUpdateForm';
 
 interface UserInfoCardProps {
   user: User | null;

@@ -34,7 +34,7 @@ export default function UnauthorizedPage() {
           </Button>
           <Button
             variant="primary"
-            onClick={() => router.push("/profile")}
+            onClick={() => router.push("/account-settings")}
           >
             Go to Profile
           </Button>

@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     e.stopPropagation();
@@ -24,6 +24,14 @@ export default function UserDropdown() {
     router.push('/login');
   };
 
+  // Get user's display name and initial
+  const displayName = user 
+    ? `${user.profile.firstName} ${user.profile.lastName}`.trim() || user.email
+    : 'User';
+  const userInitial = user 
+    ? (user.profile.firstName?.[0] || user.email[0] || 'U').toUpperCase()
+    : 'U';
+
   return (
     <div className="relative">
       <button
@@ -31,11 +39,11 @@ export default function UserDropdown() {
         className="dropdown-toggle flex items-center text-gray-700 dark:text-gray-400"
       >
         <div className="bg-brand-500 mr-3 flex h-11 w-11 items-center justify-center rounded-full">
-          <span className="text-sm font-medium text-white">U</span>
+          <span className="text-sm font-medium text-white">{userInitial}</span>
         </div>
 
         <span className="text-theme-sm mr-1 block font-medium">
-          User
+          {displayName}
         </span>
 
         <svg
@@ -65,10 +73,10 @@ export default function UserDropdown() {
       >
         <div>
           <span className="text-theme-sm block font-medium text-gray-700 dark:text-gray-400">
-            User Name
+            {displayName}
           </span>
           <span className="text-theme-xs mt-0.5 block text-gray-500 dark:text-gray-400">
-            user@example.com
+            {user?.email || 'user@example.com'}
           </span>
         </div>
 
@@ -102,7 +110,7 @@ export default function UserDropdown() {
             <DropdownItem
               onItemClick={closeDropdown}
               tag="a"
-              href="/profile"
+              href="/support"
               className="group text-theme-sm flex items-center gap-3 rounded-lg px-3 py-2 font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
             >
               <svg

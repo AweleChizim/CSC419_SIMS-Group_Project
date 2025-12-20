@@ -86,7 +86,7 @@ export function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
         }
 
         if (!redirectPath) {
-          redirectPath = "/profile";
+          redirectPath = "/account-settings";
         }
 
         if (onSuccess) {
