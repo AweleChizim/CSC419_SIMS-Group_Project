@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Dropdown } from '../ui/dropdown/Dropdown';
 import { DropdownItem } from '../ui/dropdown/DropdownItem';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
+  const { logout } = useAuth();
 
   function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     e.stopPropagation();
@@ -17,6 +19,8 @@ export default function UserDropdown() {
   }
 
   const handleSignOut = async () => {
+    closeDropdown();
+    await logout();
     router.push('/login');
   };
 
