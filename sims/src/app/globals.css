@@ -38,20 +38,30 @@
   --color-white: #ffffff;
   --color-black: #101828;
 
-  --color-brand-25: #f2f7ff;
-  --color-brand-50: #ecf3ff;
-  --color-brand-100: #dde9ff;
-  --color-brand-200: #c2d6ff;
-  --color-brand-300: #9cb9ff;
-  --color-brand-400: #7592ff;
-  --color-brand-500: #465fff;
-  --color-brand-550: #2C51A5;
-  --color-brand-600: #3641f5;
-  --color-brand-700: #2a31d8;
-  --color-brand-800: #252dae;
-  --color-brand-900: #262e89;
-  --color-brand-950: #161950;
-  --color-brand-960: #111F3F;
+  /* Brand Colors - Secondary Blue (#00AFEF) for buttons, tabs, and interactive elements */
+  --color-brand-25: #e6f7fd;
+  --color-brand-50: #ccf0fb;
+  --color-brand-100: #99e1f7;
+  --color-brand-200: #66d2f3;
+  --color-brand-300: #33c3ef;
+  --color-brand-400: #00b4eb;
+  --color-brand-500: #00afef; /* Secondary Blue - Primary for buttons and tabs */
+  --color-brand-600: #0099d6;
+  --color-brand-700: #0083bd;
+  --color-brand-800: #006da4;
+  --color-brand-900: #00578b;
+  --color-brand-950: #004172;
+  --color-brand-960: #002b59;
+  
+  /* Primary Blue (#2E3A6E) - For dark mode backgrounds */
+  --color-primary-blue: #2e3a6e;
+  --color-primary-blue-light: #3d4a7d;
+  --color-primary-blue-dark: #1f2a5f;
+  
+  /* Tertiary Color (#E6E7E8) */
+  --color-tertiary: #e6e7e8;
+  --color-tertiary-light: #f0f1f2;
+  --color-tertiary-dark: #dcddde;
 
   --color-blue-light-25: #f5fbff;
   --color-blue-light-50: #f0f9ff;
@@ -78,7 +88,7 @@
   --color-gray-800: #1d2939;
   --color-gray-900: #101828;
   --color-gray-950: #0c111d;
-  --color-gray-dark: #1a2231;
+  --color-gray-dark: #2e3a6e; /* Use Primary Blue for dark mode background */
 
   --color-orange-25: #fffaf5;
   --color-orange-50: #fff6ed;
@@ -135,6 +145,12 @@
   --color-theme-pink-500: #ee46bc;
 
   --color-theme-purple-500: #7a5af8;
+  
+  /* Tertiary Color Utilities */
+  --color-tertiary-50: #f5f5f6;
+  --color-tertiary-100: #e6e7e8;
+  --color-tertiary-200: #dcddde;
+  --color-tertiary-300: #d1d2d3;
 
   --shadow-theme-md:
     0px 4px 8px -2px rgba(16, 24, 40, 0.1),
@@ -150,7 +166,7 @@
     0px 20px 24px -4px rgba(16, 24, 40, 0.08),
     0px 8px 8px -4px rgba(16, 24, 40, 0.03);
   --shadow-datepicker: -5px 0 0 #262d3c, 5px 0 0 #262d3c;
-  --shadow-focus-ring: 0px 0px 0px 4px rgba(70, 95, 255, 0.12);
+  --shadow-focus-ring: 0px 0px 0px 4px rgba(0, 175, 239, 0.12); /* Secondary Blue focus ring */
   --shadow-slider-navigation:
     0px 1px 2px 0px rgba(16, 24, 40, 0.1), 0px 1px 3px 0px rgba(16, 24, 40, 0.1);
   --shadow-tooltip:
@@ -191,6 +207,16 @@
   }
   body {
     @apply relative font-normal font-outfit z-1 bg-gray-50;
+  }
+  
+  /* Dark mode uses Primary Blue */
+  .dark body {
+    background-color: var(--color-primary-blue);
+  }
+  
+  /* Dark mode background adjustments */
+  .dark {
+    --color-gray-dark: var(--color-primary-blue);
   }
 }
 
@@ -279,6 +305,27 @@
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: #344054;
+}
+
+/* Tertiary color utilities */
+@utility bg-tertiary {
+  background-color: var(--color-tertiary);
+}
+
+@utility bg-tertiary-light {
+  background-color: var(--color-tertiary-light);
+}
+
+@utility bg-tertiary-dark {
+  background-color: var(--color-tertiary-dark);
+}
+
+@utility text-tertiary {
+  color: var(--color-tertiary);
+}
+
+@utility border-tertiary {
+  border-color: var(--color-tertiary);
 }
 
 
@@ -457,13 +504,13 @@ span.flatpickr-weekday,
 .flatpickr-day.selected.nextMonthDay,
 .flatpickr-day.startRange.nextMonthDay,
 .flatpickr-day.endRange.nextMonthDay {
-  background: #465fff;
+  background: #00afef; /* Secondary Blue */
   @apply border-brand-500! bg-brand-500! hover:border-brand-500! hover:bg-brand-500!;
 }
 .flatpickr-day.selected.startRange + .endRange:not(:nth-child(7n + 1)),
 .flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n + 1)),
 .flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n + 1)) {
-  box-shadow: -10px 0 0 #465fff;
+  box-shadow: -10px 0 0 #00afef; /* Secondary Blue */
 }
 
 .flatpickr-months .flatpickr-prev-month svg,
