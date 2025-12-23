@@ -7,7 +7,6 @@ import { Id } from "@/lib/convex";
 import PageBreadCrumb from "@/components/common/PageBreadCrumb";
 import MetricCard from "@/components/common/MetricCard";
 import ComponentCard from "@/components/common/ComponentCard";
-import Loading from "@/components/loading/Loading";
 import { UserIcon, GroupIcon, UserCircleIcon, TimeIcon } from "@/icons";
 
 // Type for activity log entry
@@ -19,7 +18,7 @@ type ActivityLog = {
   userEmail: string;
   userName: string;
   timestamp: number;
-  details: any;
+  details: Record<string, unknown>;
 };
 
 export default function AdminDashboardOverview() {

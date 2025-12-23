@@ -8,8 +8,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { NotFoundError, ValidationError } from "./lib/errors";
-import { validateCreateUser } from "./lib/aggregates";
-import { UserRole } from "./lib/aggregates/types";
 import {
   createSession,
   validateSessionToken,

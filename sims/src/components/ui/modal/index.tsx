@@ -34,7 +34,7 @@ export const Modal: React.FC<ModalProps> = ({
     return () => {
       try {
         document.removeEventListener('keydown', handleEscape);
-      } catch (error) {
+      } catch {
         // Silently handle any cleanup errors (e.g., from browser extensions)
       }
     };

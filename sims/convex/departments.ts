@@ -6,7 +6,6 @@
 
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
 import { validateDepartmentOwnership, NotFoundError } from "./lib/aggregates";
 
 /**

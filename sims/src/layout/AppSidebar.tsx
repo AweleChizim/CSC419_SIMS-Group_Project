@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -30,7 +30,7 @@ const AppSidebar: React.FC = () => {
   const roles = user?.roles || [];
   const userIsAdmin = isAdmin(roles);
 
-  const navItems: NavItem[] = [
+  const navItems: NavItem[] = useMemo(() => [
     {
       icon: <GridIcon />,
       name: 'Dashboard',
@@ -61,7 +61,7 @@ const AppSidebar: React.FC = () => {
           },
         ]
       : []),
-  ];
+  ], [userIsAdmin]);
 
   const renderMenuItems = (
     navItems: NavItem[],
@@ -252,7 +252,7 @@ const AppSidebar: React.FC = () => {
     };
 
     queueMicrotask(updateSubmenu);
-  }, [pathname, isActive]);
+  }, [pathname, isActive, navItems]);
 
   useEffect(() => {
     // Set the height of the submenu items when the submenu is opened
