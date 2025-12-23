@@ -109,3 +109,111 @@ export const listPublic = query({
   },
 });
 
+/**
+ * Get course details including description, prerequisites, and active sections
+ * 
+ * Returns:
+ * - Course description
+ * - Prerequisites (list of course names)
+ * - Active Sections (Instructor name, Schedule, Room, Seats Available)
+ */
+export const getDetails = query({
+  args: {
+    courseId: v.id("courses"),
+  },
+  handler: async (ctx, args) => {
+    // Get the course
+    const course = await ctx.db.get(args.courseId);
+    if (!course) {
+      throw new Error("Course not found");
+    }
+
+    // Get prerequisite course names
+    const prerequisiteNames: string[] = [];
+    if (course.prerequisites && course.prerequisites.length > 0) {
+      for (const prereqCode of course.prerequisites) {
+        const prereqCourse = await ctx.db
+          .query("courses")
+          .withIndex("by_code", (q) => q.eq("code", prereqCode))
+          .first();
+        if (prereqCourse) {
+          prerequisiteNames.push(prereqCourse.title);
+        }
+      }
+    }
+
+    // Get current term (term that includes today's date)
+    const now = Date.now();
+    const currentTerm = await ctx.db
+      .query("terms")
+      .filter((q) => 
+        q.and(
+          q.lte(q.field("startDate"), now),
+          q.gte(q.field("endDate"), now)
+        )
+      )
+      .first();
+
+    // Get active sections (sections for this course in the current term)
+    let activeSections: Array<{
+      sectionId: string;
+      instructor: string;
+      schedule: string;
+      room: string;
+      seatsAvailable: number;
+    }> = [];
+
+    if (currentTerm) {
+      const sections = await ctx.db
+        .query("sections")
+        .withIndex("by_courseId_termId", (q) => 
+          q.eq("courseId", args.courseId).eq("termId", currentTerm._id)
+        )
+        .collect();
+
+      // Process each section to get instructor name and format schedule
+      for (const section of sections) {
+        // Get instructor name
+        const instructor = await ctx.db.get(section.instructorId);
+        const instructorName = instructor
+          ? `${instructor.profile.firstName} ${instructor.profile.lastName}`
+          : "TBA";
+
+        // Format schedule from scheduleSlots
+        const scheduleParts: string[] = [];
+        for (const slot of section.scheduleSlots) {
+          scheduleParts.push(
+            `${slot.day} ${slot.startTime}-${slot.endTime}`
+          );
+        }
+        const schedule = scheduleParts.length > 0 
+          ? scheduleParts.join(", ")
+          : "TBA";
+
+        // Get room (use first slot's room, or "TBA" if no slots)
+        const room = section.scheduleSlots.length > 0
+          ? section.scheduleSlots[0].room
+          : "TBA";
+
+        // Calculate seats available
+        const seatsAvailable = section.capacity - section.enrollmentCount;
+
+        activeSections.push({
+          sectionId: section._id,
+          instructor: instructorName,
+          schedule: schedule,
+          room: room,
+          seatsAvailable: seatsAvailable,
+        });
+      }
+    }
+
+    return {
+      title: course.title,
+      description: course.description,
+      prerequisites: prerequisiteNames,
+      activeSections: activeSections,
+    };
+  },
+});
+

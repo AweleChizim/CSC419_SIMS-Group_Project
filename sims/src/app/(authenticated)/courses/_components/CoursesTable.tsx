@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Id } from '@/lib/convex';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import Loading from '@/components/loading/Loading';
@@ -24,6 +25,8 @@ interface CoursesTableProps {
 }
 
 export default function CoursesTable({ courses, isLoading }: CoursesTableProps) {
+  const router = useRouter();
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -40,6 +43,10 @@ export default function CoursesTable({ courses, isLoading }: CoursesTableProps) 
       </div>
     );
   }
+
+  const handleRowClick = (courseId: Id<'courses'>) => {
+    router.push(`/courses/${courseId}`);
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -65,7 +72,11 @@ export default function CoursesTable({ courses, isLoading }: CoursesTableProps) 
         </TableHeader>
         <TableBody>
           {courses.map((course) => (
-            <TableRow key={course._id}>
+            <TableRow 
+              key={course._id}
+              onClick={() => handleRowClick(course._id)}
+              className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+            >
               <TableCell className="px-5 py-3 text-start font-medium">
                 {course.code}
               </TableCell>
