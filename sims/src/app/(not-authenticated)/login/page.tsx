@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { LoginForm } from "./_components/LoginForm";
 import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import Loading from "@/components/loading/Loading";
-import { getDefaultRoute } from "@/utils/getDefaultRoute";
 
 export default function LoginPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -14,8 +13,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      const defaultRoute = getDefaultRoute(user.roles);
-      router.push(defaultRoute);
+      router.push('/');
     }
   }, [isAuthenticated, isLoading, user, router]);
 
