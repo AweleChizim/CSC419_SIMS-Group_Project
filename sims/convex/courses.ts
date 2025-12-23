@@ -132,12 +132,28 @@ export const getDetails = query({
     const prerequisiteNames: string[] = [];
     if (course.prerequisites && course.prerequisites.length > 0) {
       for (const prereqCode of course.prerequisites) {
-        const prereqCourse = await ctx.db
+        // Trim whitespace and try to find the course
+        const trimmedCode = prereqCode.trim();
+        
+        // First try exact match with index
+        let prereqCourse = await ctx.db
           .query("courses")
-          .withIndex("by_code", (q) => q.eq("code", prereqCode))
+          .withIndex("by_code", (q) => q.eq("code", trimmedCode))
           .first();
+        
+        // If not found, try case-insensitive search by querying all courses
+        if (!prereqCourse) {
+          const allCourses = await ctx.db.query("courses").collect();
+          prereqCourse = allCourses.find(
+            (c) => c.code.toLowerCase() === trimmedCode.toLowerCase()
+          );
+        }
+        
         if (prereqCourse) {
           prerequisiteNames.push(prereqCourse.title);
+        } else {
+          // If course not found after all attempts, show the code as fallback
+          prerequisiteNames.push(trimmedCode);
         }
       }
     }
