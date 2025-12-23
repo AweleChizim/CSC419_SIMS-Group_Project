@@ -9,6 +9,7 @@ import ComponentCard from '@/components/common/ComponentCard';
 import Input from '@/components/form/input/InputField';
 import Select from '@/components/form/Select';
 import Button from '@/components/ui/button/Button';
+import Alert from '@/components/ui/alert/Alert';
 import { useModal } from '@/hooks/useModal';
 import { PlusIcon } from '@/icons';
 import { UserRole } from '../../../../convex/lib/aggregates/types';
@@ -32,6 +33,7 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('');
   const createModal = useModal();
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   // Fetch users with filters
   const users = useQuery(
@@ -53,12 +55,20 @@ export default function UsersPage() {
 
   const isLoading = users === undefined;
 
+  const handleSuccess = () => {
+    setShowSuccessMessage(true);
+    setTimeout(() => setShowSuccessMessage(false), 3000);
+  };
+
   return (
     <RoleGuard role="admin" unauthorizedMessage="You must be an administrator to access this page.">
       <div>
         <PageBreadCrumb pageTitle="User Management" />
 
       <div className="space-y-6">
+        {showSuccessMessage && (
+          <Alert variant="success" title="Success" message="User created successfully!" />
+        )}
         {/* Filters and Create Button */}
         <ComponentCard title="Filters">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -97,7 +107,11 @@ export default function UsersPage() {
       </div>
 
       {/* Create User Modal */}
-      <CreateUser isOpen={createModal.isOpen} onClose={createModal.closeModal} />
+      <CreateUser 
+        isOpen={createModal.isOpen} 
+        onClose={createModal.closeModal}
+        onSuccess={handleSuccess}
+      />
       </div>
     </RoleGuard>
   );

@@ -37,23 +37,23 @@ const AppSidebar: React.FC = () => {
       path: '/',
     },
     {
-      icon: <GroupIcon />,
-      name: 'Schools',
-      path: '/school',
-    },
-    {
       icon: <PencilIcon />,
       name: 'Grades',
       path: '/grades',
     },
-    {
-      icon: <PieChartIcon />,
-      name: 'Departments',
-      path: '/departments',
-    },
-    // Only show Users link for admins
+    // Only show admin links for admins
     ...(userIsAdmin
       ? [
+          {
+            icon: <GroupIcon />,
+            name: 'Schools',
+            path: '/schools',
+          },
+          {
+            icon: <PieChartIcon />,
+            name: 'Departments',
+            path: '/departments',
+          },
           {
             icon: <UserIcon />,
             name: 'Users',

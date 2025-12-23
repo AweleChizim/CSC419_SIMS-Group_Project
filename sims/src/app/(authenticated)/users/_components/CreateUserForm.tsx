@@ -13,6 +13,7 @@ import Alert from '@/components/ui/alert/Alert';
 interface CreateUserProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 const createRoleOptions: { value: string; label: string }[] = [
@@ -23,7 +24,7 @@ const createRoleOptions: { value: string; label: string }[] = [
   { value: 'department_head', label: 'Department Head' },
 ];
 
-export default function CreateUser({ isOpen, onClose }: CreateUserProps) {
+export default function CreateUser({ isOpen, onClose, onSuccess }: CreateUserProps) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -105,6 +106,10 @@ export default function CreateUser({ isOpen, onClose }: CreateUserProps) {
       // Reset form and close modal
       setFormData({ firstName: '', lastName: '', email: '', password: '', role: '' });
       onClose();
+      // Notify parent of success
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.';
