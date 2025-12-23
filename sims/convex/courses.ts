@@ -146,7 +146,7 @@ export const getDetails = query({
           const allCourses = await ctx.db.query("courses").collect();
           prereqCourse = allCourses.find(
             (c) => c.code.toLowerCase() === trimmedCode.toLowerCase()
-          );
+          ) || null;
         }
         
         if (prereqCourse) {
