@@ -4,6 +4,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSidebar } from '../context/SidebarContext';
+import { useAuth } from '../hooks/useAuth';
+import { isAdmin } from '../services/permissions.service';
 import {
   PencilIcon,
   ChevronDownIcon,
@@ -11,6 +13,7 @@ import {
   HorizontaLDots,
   GroupIcon,
   PieChartIcon,
+  UserIcon,
 } from '../icons';
 
 type NavItem = {
@@ -20,32 +23,45 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-const navItems: NavItem[] = [
-  {
-    icon: <GridIcon />,
-    name: 'Dashboard',
-    path: '/',
-  },
-  {
-    icon: <GroupIcon />,
-    name: 'Schools',
-    path: '/school',
-  },
-  {
-    icon: <PencilIcon />,
-    name: 'Grades',
-    path: '/grades',
-  },
-  {
-    icon: <PieChartIcon />,
-    name: 'Departments',
-    path: '/departments',
-  },
-];
-
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const { user } = useAuth();
+  const roles = user?.roles || [];
+  const userIsAdmin = isAdmin(roles);
+
+  const navItems: NavItem[] = [
+    {
+      icon: <GridIcon />,
+      name: 'Dashboard',
+      path: '/',
+    },
+    {
+      icon: <GroupIcon />,
+      name: 'Schools',
+      path: '/school',
+    },
+    {
+      icon: <PencilIcon />,
+      name: 'Grades',
+      path: '/grades',
+    },
+    {
+      icon: <PieChartIcon />,
+      name: 'Departments',
+      path: '/departments',
+    },
+    // Only show Users link for admins
+    ...(userIsAdmin
+      ? [
+          {
+            icon: <UserIcon />,
+            name: 'Users',
+            path: '/users',
+          },
+        ]
+      : []),
+  ];
 
   const renderMenuItems = (
     navItems: NavItem[],

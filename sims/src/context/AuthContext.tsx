@@ -33,16 +33,6 @@ interface AuthContextType {
   // Authentication methods
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   logout: () => Promise<void>;
-  register: (data: {
-    email: string;
-    password: string;
-    roles: string[];
-    profile: {
-      firstName: string;
-      middleName?: string;
-      lastName: string;
-    };
-  }) => Promise<{ success: boolean; error?: string }>;
   
   // Role checking
   hasRole: (role: UserRole) => boolean;
@@ -88,7 +78,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Mutations
   const loginMutation = useMutation(api.auth.login);
-  const registerMutation = useMutation(api.auth.register);
   const logoutMutation = useMutation(api.auth.logout);
 
   // Update authentication state when user data changes
@@ -181,49 +170,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [storedToken, logoutMutation]);
 
-  // Register function
-  const register = useCallback(async (data: {
-    email: string;
-    password: string;
-    roles: string[];
-    profile: {
-      firstName: string;
-      middleName?: string;
-      lastName: string;
-    };
-  }): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const result = await registerMutation(data);
-      
-      if (result.success && result.token) {
-        // Store session token from registration
-        if (typeof window !== "undefined") {
-          localStorage.setItem("sims_session_token", result.token);
-        }
-        setStoredToken(result.token);
-        
-        // Update auth state immediately with returned user
-        if (result.userId && result.email) {
-          const userObj: User = {
-            _id: result.userId,
-            email: result.email,
-            roles: (result.roles ?? []) as UserRole[],
-            profile: result.profile ?? { firstName: "", lastName: "" },
-          };
-          setIsAuthenticated(true);
-          setUser(userObj);
-        }
-        
-        return { success: true };
-      }
-      
-      return { success: false, error: "Registration failed" };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An error occurred during registration";
-      return { success: false, error: errorMessage };
-    }
-  }, [registerMutation]);
-
   // Role checking functions
   const hasRole = useCallback((role: UserRole): boolean => {
     return user?.roles.includes(role) ?? false;
@@ -248,7 +194,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     login,
     logout,
-    register,
     hasRole,
     hasAnyRole,
     hasAllRoles,
