@@ -25,10 +25,11 @@ const createRoleOptions: { value: string; label: string }[] = [
 ];
 
 const levelOptions: { value: string; label: string }[] = [
-  { value: 'Freshman', label: 'Freshman' },
-  { value: 'Sophomore', label: 'Sophomore' },
-  { value: 'Junior', label: 'Junior' },
-  { value: 'Senior', label: 'Senior' },
+  { value: '100', label: '100 Level' },
+  { value: '200', label: '200 Level' },
+  { value: '300', label: '300 Level' },
+  { value: '400', label: '400 Level' },
+  { value: '500', label: '500 Level' },
 ];
 
 const statusOptions: { value: string; label: string }[] = [

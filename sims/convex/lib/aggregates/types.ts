@@ -47,7 +47,7 @@ export interface Course {
   title: string;
   description: string;
   credits: number;
-  prerequisites: Id<"courses">[];
+  prerequisites: string[]; // Course codes instead of IDs
 }
 
 // ============================================================================

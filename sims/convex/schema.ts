@@ -69,6 +69,7 @@ export default defineSchema({
   /**
    * Courses Collection (AGGREGATE ROOT: CourseAggregate)
    * Represents individual courses that can be offered
+   * Foreign Keys: departmentId → departments._id
    * See ../docs/aggregates_and_invariants.md for invariants
    */
   courses: defineTable({
@@ -76,9 +77,14 @@ export default defineSchema({
     title: v.string(),
     description: v.string(),
     credits: v.number(),
-    prerequisites: v.array(v.id("courses")),
+    prerequisites: v.array(v.string()), // Course codes instead of IDs
+    departmentId: v.id("departments"),
+    level: v.string(), // Course level: "100", "200", "300", "400", "500"
   })
-    .index("by_code", ["code"]),
+    .index("by_code", ["code"])
+    .index("by_departmentId", ["departmentId"])
+    .index("by_level", ["level"])
+    .index("by_departmentId_level", ["departmentId", "level"]),
 
   /**
    * Sections Collection (AGGREGATE ROOT: SectionAggregate)

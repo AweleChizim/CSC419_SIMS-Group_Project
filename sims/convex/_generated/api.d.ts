@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as courses from "../courses.js";
 import type * as dashboard from "../dashboard.js";
 import type * as departments from "../departments.js";
 import type * as examples_studentMutations from "../examples/studentMutations.js";
@@ -51,6 +52,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  courses: typeof courses;
   dashboard: typeof dashboard;
   departments: typeof departments;
   "examples/studentMutations": typeof examples_studentMutations;
