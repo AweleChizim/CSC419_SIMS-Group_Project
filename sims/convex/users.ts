@@ -8,7 +8,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { NotFoundError, ValidationError } from "./lib/errors";
-import { validateUpdateUser, validateCreateUser, validateCreateStudent } from "./lib/aggregates";
+import { validateUpdateUser, validateCreateUser } from "./lib/aggregates";
 import { UserRole } from "./lib/aggregates/types";
 import { createSession } from "./lib/session";
 

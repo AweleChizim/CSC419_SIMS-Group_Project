@@ -171,7 +171,7 @@ export const getDetails = query({
       .first();
 
     // Get active sections (sections for this course in the current term)
-    let activeSections: Array<{
+    const activeSections: Array<{
       sectionId: string;
       instructor: string;
       schedule: string;

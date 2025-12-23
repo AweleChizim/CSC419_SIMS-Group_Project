@@ -109,12 +109,8 @@ export const getStudentStats = query({
       throw new Error("Student record not found");
     }
 
-    // Get department and school information
+    // Get department information
     const department = await ctx.db.get(student.departmentId);
-    let school = null;
-    if (department) {
-      school = await ctx.db.get(department.schoolId);
-    }
 
     // Get current term
     const now = Date.now();
@@ -182,12 +178,12 @@ export const getStudentStats = query({
               creditsEarned += course.credits;
             }
           }
-        } catch (error) {
+        } catch {
           // If final grade can't be calculated (missing assessments/grades), skip
           // This enrollment won't count toward GPA
           continue;
         }
-      } catch (error) {
+      } catch {
         // Skip this enrollment if there's an error
         continue;
       }

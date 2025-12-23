@@ -7,7 +7,7 @@
 import { DatabaseReader } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../errors";
-import { TranscriptEntry, Course } from "../aggregates/types";
+import { TranscriptEntry } from "../aggregates/types";
 
 /**
  * Result of a degree audit

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/lib/convex';
 import { Id } from '@/lib/convex';
@@ -23,15 +23,13 @@ type Course = {
 
 export default function CoursesPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
-
-  // Get session token from localStorage
-  useEffect(() => {
+  // Initialize session token from localStorage using lazy initialization
+  const [sessionToken] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('sims_session_token');
-      setSessionToken(token);
+      return localStorage.getItem('sims_session_token');
     }
-  }, []);
+    return null;
+  });
 
   // Fetch courses with search filter
   // Note: Courses are automatically filtered by student's department and level in the backend

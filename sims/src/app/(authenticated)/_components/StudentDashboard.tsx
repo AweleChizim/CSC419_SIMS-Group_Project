@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/convex";
@@ -9,13 +9,12 @@ import MetricCard from "@/components/common/MetricCard";
 import ComponentCard from "@/components/common/ComponentCard";
 import Badge from "@/components/ui/badge/Badge";
 import { PieChartIcon, TaskIcon, CheckCircleIcon, CalenderIcon } from "@/icons";
-import Loading from "@/components/loading/Loading";
 import Button from "@/components/ui/button/Button";
 
 type StudentStats = {
   studentProfile: {
     name: string;
-    program: string;
+    department: string;
     session: string;
     term: string;
     status: string;
@@ -36,15 +35,13 @@ type StudentStats = {
 
 export default function StudentDashboardView() {
   const router = useRouter();
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
-
-  // Get session token from localStorage
-  useEffect(() => {
+  // Initialize session token from localStorage using lazy initialization
+  const [sessionToken] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("sims_session_token");
-      setSessionToken(token);
+      return localStorage.getItem("sims_session_token");
     }
-  }, []);
+    return null;
+  });
 
   // Fetch student stats
   const stats = useQuery(
@@ -101,7 +98,7 @@ export default function StudentDashboardView() {
               Welcome back, {stats.studentProfile.name}
             </h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              {stats.studentProfile.program} | {stats.studentProfile.session}{" "}
+              {stats.studentProfile.department} | {stats.studentProfile.session}{" "}
               {stats.studentProfile.term}
             </p>
           </div>

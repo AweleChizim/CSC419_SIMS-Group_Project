@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/lib/convex';
+import { Id } from '@/lib/convex';
 import { Modal } from '@/components/ui/modal';
 import Input from '@/components/form/input/InputField';
 import Select from '@/components/form/Select';
@@ -147,7 +148,21 @@ export default function CreateUser({ isOpen, onClose, onSuccess }: CreateUserPro
     const password = formData.password || `Temp${Math.random().toString(36).slice(-8)}!`;
 
     try {
-      const mutationData: any = {
+      const mutationData: {
+        email: string;
+        password: string;
+        roles: string[];
+        profile: {
+          firstName: string;
+          lastName: string;
+        };
+        studentData?: {
+          studentNumber: string;
+          departmentId: Id<'departments'>;
+          level: string;
+          status: string;
+        };
+      } = {
         email: formData.email.trim(),
         password: password,
         roles: [formData.role],
@@ -161,7 +176,7 @@ export default function CreateUser({ isOpen, onClose, onSuccess }: CreateUserPro
       if (isStudentRole) {
         mutationData.studentData = {
           studentNumber: formData.studentNumber.trim(),
-          departmentId: formData.departmentId as any,
+          departmentId: formData.departmentId as Id<'departments'>,
           level: formData.level,
           status: formData.status,
         };
