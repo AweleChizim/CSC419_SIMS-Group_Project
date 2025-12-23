@@ -16,7 +16,6 @@ import { v } from "convex/values";
  * 
  * Aggregate Roots in this schema:
  * - schools (SchoolAggregate)
- * - programs (ProgramAggregate)
  * - courses (CourseAggregate)
  * - sections (SectionAggregate)
  * - students (StudentAggregate)
@@ -66,21 +65,6 @@ export default defineSchema({
     .index("by_schoolId", ["schoolId"])
     .index("by_headId", ["headId"])
     .index("by_name", ["name"]),
-
-  /**
-   * Programs Collection (AGGREGATE ROOT: ProgramAggregate)
-   * Represents academic programs offered by departments
-   * Foreign Keys: departmentId → departments._id
-   * See ../docs/aggregates_and_invariants.md for invariants
-   */
-  programs: defineTable({
-    departmentId: v.id("departments"),
-    code: v.string(),
-    name: v.string(),
-    requirements: v.any(), // Flexible object for varying program requirements
-  })
-    .index("by_departmentId", ["departmentId"])
-    .index("by_code", ["code"]),
 
   /**
    * Courses Collection (AGGREGATE ROOT: CourseAggregate)
@@ -148,20 +132,20 @@ export default defineSchema({
    * Students Collection (AGGREGATE ROOT: StudentAggregate)
    * Represents student-specific information linked to users
    * Uses StudentIdentifier value object
-   * Foreign Keys: userId → users._id, programId → programs._id
+   * Foreign Keys: userId → users._id, departmentId → departments._id
    * See ../docs/aggregates_and_invariants.md for invariants
    */
   students: defineTable({
     userId: v.id("users"),
     studentNumber: v.string(), // StudentIdentifier: studentNumber
     admissionYear: v.number(), // StudentIdentifier: admissionYear
-    programId: v.id("programs"),
+    departmentId: v.id("departments"),
     level: v.string(),
     status: v.string(),
   })
     .index("by_userId", ["userId"])
     .index("by_studentNumber", ["studentNumber"])
-    .index("by_programId", ["programId"])
+    .index("by_departmentId", ["departmentId"])
     .index("by_status", ["status"]),
 
   /**
