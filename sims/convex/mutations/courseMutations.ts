@@ -21,6 +21,8 @@ export const createCourse = mutation({
     credits: v.number(),
     prerequisites: v.array(v.string()), // Course codes instead of IDs
     departmentId: v.id("departments"),
+    programIds: v.optional(v.array(v.id("programs"))), // Array of program IDs
+    status: v.optional(v.string()), // Course status: "active", "inactive", "archived"
     level: v.string(),
     createdByUserId: v.id("users"),
   },
@@ -33,6 +35,16 @@ export const createCourse = mutation({
       args.prerequisites
     );
 
+    // Validate program IDs if provided
+    if (args.programIds) {
+      for (const programId of args.programIds) {
+        const program = await ctx.db.get(programId);
+        if (!program) {
+          throw new NotFoundError("Program", programId);
+        }
+      }
+    }
+
     // Create the course
     const courseId = await ctx.db.insert("courses", {
       code: args.code,
@@ -41,6 +53,8 @@ export const createCourse = mutation({
       credits: args.credits,
       prerequisites: args.prerequisites,
       departmentId: args.departmentId,
+      programIds: args.programIds || [],
+      status: args.status || "active",
       level: args.level,
     });
 
@@ -54,6 +68,7 @@ export const createCourse = mutation({
         title: args.title,
         credits: args.credits,
         prerequisitesCount: args.prerequisites.length,
+        programIdsCount: args.programIds?.length || 0,
       }
     );
 
@@ -73,6 +88,8 @@ export const updateCourse = mutation({
     credits: v.optional(v.number()),
     prerequisites: v.optional(v.array(v.string())), // Course codes instead of IDs
     departmentId: v.optional(v.id("departments")),
+    programIds: v.optional(v.array(v.id("programs"))), // Array of program IDs
+    status: v.optional(v.string()), // Course status: "active", "inactive", "archived"
     level: v.optional(v.string()),
     updatedByUserId: v.id("users"),
   },
@@ -92,6 +109,16 @@ export const updateCourse = mutation({
       args.prerequisites
     );
 
+    // Validate program IDs if provided
+    if (args.programIds) {
+      for (const programId of args.programIds) {
+        const program = await ctx.db.get(programId);
+        if (!program) {
+          throw new NotFoundError("Program", programId);
+        }
+      }
+    }
+
     // Build update object with only provided fields
     const updates: {
       code?: string;
@@ -100,6 +127,8 @@ export const updateCourse = mutation({
       credits?: number;
       prerequisites?: string[];
       departmentId?: Id<"departments">;
+      programIds?: Id<"programs">[];
+      status?: string;
       level?: string;
     } = {};
 
@@ -109,6 +138,8 @@ export const updateCourse = mutation({
     if (args.credits !== undefined) updates.credits = args.credits;
     if (args.prerequisites !== undefined) updates.prerequisites = args.prerequisites;
     if (args.departmentId !== undefined) updates.departmentId = args.departmentId;
+    if (args.programIds !== undefined) updates.programIds = args.programIds;
+    if (args.status !== undefined) updates.status = args.status;
     if (args.level !== undefined) updates.level = args.level;
 
     // Update the course
@@ -128,6 +159,8 @@ export const updateCourse = mutation({
         newCredits: args.credits ?? course.credits,
         previousPrerequisitesCount: course.prerequisites.length,
         newPrerequisitesCount: args.prerequisites?.length ?? course.prerequisites.length,
+        previousProgramIdsCount: course.programIds?.length ?? 0,
+        newProgramIdsCount: args.programIds?.length ?? course.programIds?.length ?? 0,
       }
     );
 
