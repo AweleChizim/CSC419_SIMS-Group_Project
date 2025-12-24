@@ -269,7 +269,9 @@ export default defineSchema({
    * See ../docs/aggregates_and_invariants.md for invariants
    */
   academicSessions: defineTable({
-    label: v.string(),
+    yearLabel: v.string(), // e.g., "2024/2025"
+    startDate: v.number(), // Unix timestamp
+    endDate: v.number(), // Unix timestamp
     terms: v.array(
       v.object({
         id: v.string(), // Term identifier within the session
@@ -279,7 +281,7 @@ export default defineSchema({
       })
     ),
   })
-    .index("by_label", ["label"]),
+    .index("by_yearLabel", ["yearLabel"]),
 
   /**
    * Terms Collection

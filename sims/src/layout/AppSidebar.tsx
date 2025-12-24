@@ -15,6 +15,7 @@ import {
   PieChartIcon,
   UserIcon,
   FileIcon,
+  CalenderIcon,
 } from '../icons';
 
 type NavItem = {
@@ -71,6 +72,11 @@ const AppSidebar: React.FC = () => {
             icon: <FileIcon />,
             name: 'Programs',
             path: '/programs',
+          },
+          {
+            icon: <CalenderIcon />,
+            name: 'Academic Sessions',
+            path: '/academic-sessions',
           },
           {
             icon: <UserIcon />,

@@ -178,7 +178,7 @@ export const getProfile = query({
               name: currentTerm.name,
               session: currentSession ? {
                 _id: currentSession._id,
-                label: currentSession.label,
+                yearLabel: currentSession.yearLabel,
               } : null,
             } : null,
           },
