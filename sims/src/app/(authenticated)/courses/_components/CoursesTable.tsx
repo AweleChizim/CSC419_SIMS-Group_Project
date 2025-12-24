@@ -120,11 +120,15 @@ export default function CoursesTable({ courses, isLoading }: CoursesTableProps) 
               </TableCell>
               <TableCell className="px-5 py-3 text-start">
                 <Badge 
-                  color={course.status === 'active' ? 'success' : course.status === 'inactive' ? 'warning' : 'secondary'} 
+                  color={
+                    course.status === 'C' ? 'primary' : 
+                    course.status === 'R' ? 'success' : 
+                    'secondary'
+                  } 
                   variant="light" 
                   size="sm"
                 >
-                  {course.status || 'active'}
+                  {course.status === 'C' ? 'Core' : course.status === 'R' ? 'Required' : course.status === 'E' ? 'Elective' : course.status || 'E'}
                 </Badge>
               </TableCell>
               <TableCell className="px-5 py-3 text-start">

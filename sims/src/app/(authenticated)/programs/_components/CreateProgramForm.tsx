@@ -26,6 +26,7 @@ type Course = {
   _id: Id<'courses'>;
   code: string;
   title: string;
+  status?: string;
 };
 
 export default function CreateProgram({ isOpen, onClose, onSuccess }: CreateProgramProps) {
@@ -276,8 +277,17 @@ export default function CreateProgram({ isOpen, onClose, onSuccess }: CreateProg
                             disabled={isLoading}
                             className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                           />
-                          <span className="text-sm">
+                          <span className="text-sm flex items-center gap-2">
                             <span className="font-medium">{course.code}</span> - {course.title}
+                            {course.status && (
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                course.status === 'C' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                course.status === 'R' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                              }`}>
+                                {course.status === 'C' ? 'Core' : course.status === 'R' ? 'Required' : 'Elective'}
+                              </span>
+                            )}
                           </span>
                         </label>
                       ))}

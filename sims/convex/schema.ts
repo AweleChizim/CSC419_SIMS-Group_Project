@@ -95,7 +95,7 @@ export default defineSchema({
     prerequisites: v.array(v.string()), // Course codes instead of IDs
     departmentId: v.id("departments"),
     programIds: v.array(v.id("programs")), // Array of program IDs this course belongs to
-    status: v.string(), // Course status: "active", "inactive", "archived", etc.
+    status: v.string(), // Course status: "C" (Core/Required), "R" (Required), "E" (Elective)
     level: v.string(), // Course level: "100", "200", "300", "400", "500"
   })
     .index("by_code", ["code"])

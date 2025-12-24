@@ -114,7 +114,7 @@ export const listPublic = query({
               }
             : null,
           programs: programs.filter((p) => p !== null),
-          status: course.status || "active",
+          status: course.status || "E",
           level: course.level,
         };
       })
