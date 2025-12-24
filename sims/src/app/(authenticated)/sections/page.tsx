@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/lib/convex';
 import { Id } from '@/lib/convex';
@@ -56,32 +56,36 @@ export default function SectionsPage() {
     return null;
   });
 
-  const [selectedSessionId, setSelectedSessionId] = useState<Id<'academicSessions'> | undefined>(undefined);
   const [selectedTermId, setSelectedTermId] = useState<Id<'terms'> | undefined>(undefined);
   const createModal = useModal();
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
-  // Fetch academic sessions
-  const academicSessions = useQuery(api.academicSessions.listSessions) as AcademicSession[] | undefined;
+  // Fetch current or next active term
+  const currentOrNextTerm = useQuery(api.department.getCurrentOrNextTerm) as Term | null | undefined;
 
-  // Fetch terms - filter by selected session if provided
-  const allTerms = useQuery(api.department.getTerms) as Term[] | undefined;
-  const terms = selectedSessionId
-    ? allTerms?.filter((term) => term.sessionId === selectedSessionId)
-    : allTerms;
+  // Fetch terms
+  const terms = useQuery(api.department.getTerms) as Term[] | undefined;
 
-  // Fetch sections
+  // Set default term to current/next term if no term is selected
+  useEffect(() => {
+    if (currentOrNextTerm && !selectedTermId) {
+      setSelectedTermId(currentOrNextTerm._id);
+    }
+  }, [currentOrNextTerm, selectedTermId]);
+
+  // Fetch sections - use selectedTermId or currentOrNextTerm
+  const effectiveTermId = selectedTermId || currentOrNextTerm?._id;
   const sections = useQuery(
     api.department.getSections,
-    sessionToken
+    sessionToken && effectiveTermId
       ? {
           token: sessionToken,
-          termId: selectedTermId,
+          termId: effectiveTermId,
         }
       : 'skip'
   ) as Section[] | undefined;
 
-  const isLoading = sections === undefined || terms === undefined || academicSessions === undefined;
+  const isLoading = sections === undefined || terms === undefined;
 
   const handleSuccess = () => {
     setShowSuccessMessage(true);
@@ -89,23 +93,8 @@ export default function SectionsPage() {
     createModal.closeModal();
   };
 
-  const handleSessionChange = (sessionId: string) => {
-    const newSessionId = sessionId ? (sessionId as Id<'academicSessions'>) : undefined;
-    setSelectedSessionId(newSessionId);
-    // Reset term selection when session changes
-    setSelectedTermId(undefined);
-  };
-
-  const sessionOptions = [
-    { value: '', label: 'All Sessions' },
-    ...(academicSessions?.map((session) => ({
-      value: session._id,
-      label: session.yearLabel,
-    })) || []),
-  ];
-
   const termOptions = [
-    { value: '', label: selectedSessionId ? 'All Terms' : 'Select Session First' },
+    { value: '', label: 'All Terms' },
     ...(terms?.map((term) => ({
       value: term._id,
       label: `${term.name} (${term.sessionYearLabel})`,
@@ -127,29 +116,17 @@ export default function SectionsPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="sessionFilter">Session:</Label>
-                  <div className="relative w-full sm:w-48">
-                    <Select
-                      options={sessionOptions}
-                      placeholder="Select a session"
-                      onChange={(e) => handleSessionChange(e.target.value)}
-                      defaultValue={selectedSessionId || ''}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
                   <Label htmlFor="termFilter">Term:</Label>
                   <div className="relative w-full sm:w-48">
                     <Select
                       options={termOptions}
-                      placeholder={selectedSessionId ? "Select a term" : "Select session first"}
+                      placeholder="Select a term"
                       onChange={(e) =>
                         setSelectedTermId(
                           e.target.value ? (e.target.value as Id<'terms'>) : undefined
                         )
                       }
                       defaultValue={selectedTermId || ''}
-                      disabled={!selectedSessionId}
                     />
                   </div>
                 </div>
@@ -169,12 +146,12 @@ export default function SectionsPage() {
               sections={sections} 
               isLoading={isLoading}
               sessionToken={sessionToken}
-              selectedTermId={selectedTermId}
+              selectedTermId={effectiveTermId}
             />
           </ComponentCard>
 
           {/* Instructor Workload */}
-          <InstructorWorkload sessionToken={sessionToken} />
+          <InstructorWorkload sessionToken={sessionToken} selectedTermId={effectiveTermId} />
         </div>
 
         {/* Create Section Modal */}

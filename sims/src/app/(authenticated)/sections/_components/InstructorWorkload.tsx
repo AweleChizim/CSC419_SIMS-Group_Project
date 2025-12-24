@@ -19,43 +19,49 @@ type Term = {
   _id: Id<'terms'>;
   name: string;
   sessionId: Id<'academicSessions'>;
+  sessionYearLabel: string;
   startDate: number;
   endDate: number;
 };
 
 interface InstructorWorkloadProps {
   sessionToken: string | null;
+  selectedTermId?: Id<'terms'> | undefined;
 }
 
-export default function InstructorWorkload({ sessionToken }: InstructorWorkloadProps) {
-  const [selectedTermId, setSelectedTermId] = useState<Id<'terms'> | undefined>(undefined);
+export default function InstructorWorkload({ sessionToken, selectedTermId }: InstructorWorkloadProps) {
+  // Fetch current or next active term if no term is provided
+  const currentOrNextTerm = useQuery(api.department.getCurrentOrNextTerm) as Term | null | undefined;
+  const effectiveTermId = selectedTermId || currentOrNextTerm?._id;
 
   // Fetch instructor workload
   const instructorWorkloads = useQuery(
     api.department.getInstructorWorkload,
-    sessionToken
+    sessionToken && effectiveTermId
       ? {
           token: sessionToken,
-          termId: selectedTermId,
+          termId: effectiveTermId,
         }
       : 'skip'
   ) as InstructorWorkload[] | undefined;
 
-  // Fetch terms for filter
+  // Fetch terms for display
   const terms = useQuery(api.department.getTerms) as Term[] | undefined;
 
   const isLoading = instructorWorkloads === undefined || terms === undefined;
 
-  const termOptions = [
-    { value: '', label: 'All Terms' },
-    ...(terms?.map((term) => ({
-      value: term._id,
-      label: term.name,
-    })) || []),
-  ];
+  // Get the term name for display
+  const displayTerm = effectiveTermId
+    ? terms?.find((t) => t._id === effectiveTermId)
+    : null;
 
   return (
-    <ComponentCard title="Instructor Workload" desc="View instructor assignments and workload distribution">
+    <ComponentCard 
+      title="Instructor Workload" 
+      desc={displayTerm 
+        ? `View instructor assignments for ${displayTerm.name} (${displayTerm.sessionYearLabel})`
+        : "View instructor assignments and workload distribution"}
+    >
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loading />

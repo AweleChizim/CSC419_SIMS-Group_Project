@@ -28,6 +28,7 @@ type Term = {
   _id: Id<"terms">;
   name: string;
   sessionId: Id<"academicSessions">;
+  sessionYearLabel: string;
   startDate: number;
   endDate: number;
 };
@@ -55,6 +56,9 @@ export default function CreateSectionModal({
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [courseSearchQuery, setCourseSearchQuery] = useState("");
+  const [showCourseDropdown, setShowCourseDropdown] = useState(false);
+  const courseInputRef = React.useRef<HTMLDivElement>(null);
 
   // Fetch courses and terms
   const courses = useQuery(
@@ -65,6 +69,16 @@ export default function CreateSectionModal({
   const terms = useQuery(api.department.getTerms) as Term[] | undefined;
 
   const createSection = useMutation(api.department.createSection);
+
+  // Update course search query when a course is selected
+  useEffect(() => {
+    if (formData.courseId && courses) {
+      const selectedCourse = courses.find((c) => c._id === formData.courseId);
+      if (selectedCourse) {
+        setCourseSearchQuery(`${selectedCourse.code} - ${selectedCourse.title}`);
+      }
+    }
+  }, [formData.courseId, courses]);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -77,8 +91,24 @@ export default function CreateSectionModal({
       });
       setValidationErrors({});
       setApiError(null);
+      setCourseSearchQuery("");
+      setShowCourseDropdown(false);
     }
   }, [isOpen]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        courseInputRef.current &&
+        !courseInputRef.current.contains(event.target as Node)
+      ) {
+        setShowCourseDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -150,16 +180,46 @@ export default function CreateSectionModal({
     }
   };
 
-  const courseOptions =
-    courses?.map((course) => ({
-      value: course._id,
-      label: `${course.code} - ${course.title}`,
-    })) || [];
+  // Filter courses based on search query
+  const filteredCourses = React.useMemo(() => {
+    if (!courses) return [];
+    if (!courseSearchQuery.trim()) return courses;
+    
+    const query = courseSearchQuery.toLowerCase().trim();
+    return courses.filter(
+      (course) =>
+        course.code.toLowerCase().includes(query) ||
+        course.title.toLowerCase().includes(query)
+    );
+  }, [courses, courseSearchQuery]);
+
+  const handleCourseSelect = (courseId: string, courseLabel: string) => {
+    setFormData((prev) => ({ ...prev, courseId }));
+    setCourseSearchQuery(courseLabel);
+    setShowCourseDropdown(false);
+    // Clear validation error
+    if (validationErrors.courseId) {
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.courseId;
+        return newErrors;
+      });
+    }
+  };
+
+  const handleCourseSearchChange = (value: string) => {
+    setCourseSearchQuery(value);
+    setShowCourseDropdown(true);
+    // Clear course selection if search changes
+    if (formData.courseId) {
+      setFormData((prev) => ({ ...prev, courseId: "" }));
+    }
+  };
 
   const termOptions =
     terms?.map((term) => ({
       value: term._id,
-      label: term.name,
+      label: `${term.name} (${term.sessionYearLabel})`,
     })) || [];
 
   return (
@@ -190,30 +250,42 @@ export default function CreateSectionModal({
                 <Label htmlFor="courseId">
                   Course <span className="text-error-500">*</span>
                 </Label>
-                <div className="relative">
-                  <Select
-                    options={courseOptions}
-                    placeholder="Select a course"
-                    onChange={(e) => handleInputChange("courseId", e.target.value)}
-                    defaultValue={formData.courseId}
+                <div className="relative" ref={courseInputRef}>
+                  <Input
+                    id="courseId"
+                    type="text"
+                    placeholder="Type to search for a course (e.g., CSC 101 or Introduction)"
+                    value={courseSearchQuery}
+                    onChange={(e) => handleCourseSearchChange(e.target.value)}
+                    onFocus={() => setShowCourseDropdown(true)}
                     error={!!validationErrors.courseId}
                     disabled={isLoading}
                   />
-                  <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </span>
+                  {showCourseDropdown && filteredCourses.length > 0 && (
+                    <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                      {filteredCourses.map((course) => {
+                        const courseLabel = `${course.code} - ${course.title}`;
+                        return (
+                          <button
+                            key={course._id}
+                            type="button"
+                            className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                            onClick={() => handleCourseSelect(course._id, courseLabel)}
+                          >
+                            <div className="font-medium">{course.code}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {course.title}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {showCourseDropdown && courseSearchQuery.trim() && filteredCourses.length === 0 && (
+                    <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500 shadow-lg dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                      No courses found matching "{courseSearchQuery}"
+                    </div>
+                  )}
                 </div>
                 {validationErrors.courseId && (
                   <p className="text-error-500 mt-1 text-sm">

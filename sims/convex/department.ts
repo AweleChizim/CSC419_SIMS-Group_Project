@@ -405,6 +405,57 @@ export const getTerms = query({
 });
 
 /**
+ * Get the current active term or the next upcoming term
+ * Returns the term that is currently in progress (current date between startDate and endDate)
+ * If no current term exists, returns the next upcoming term (earliest startDate > now)
+ */
+export const getCurrentOrNextTerm = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const allTerms = await ctx.db.query("terms").collect();
+    
+    // First, try to find a term that is currently in progress
+    const currentTerm = allTerms.find(
+      (term) => term.startDate <= now && term.endDate >= now
+    );
+    
+    if (currentTerm) {
+      const session = await ctx.db.get(currentTerm.sessionId);
+      return {
+        _id: currentTerm._id,
+        name: currentTerm.name,
+        sessionId: currentTerm.sessionId,
+        sessionYearLabel: session?.yearLabel || "Unknown",
+        startDate: currentTerm.startDate,
+        endDate: currentTerm.endDate,
+      };
+    }
+    
+    // If no current term, find the next upcoming term
+    const upcomingTerms = allTerms
+      .filter((term) => term.startDate > now)
+      .sort((a, b) => a.startDate - b.startDate); // Sort by start date ascending
+    
+    if (upcomingTerms.length > 0) {
+      const nextTerm = upcomingTerms[0];
+      const session = await ctx.db.get(nextTerm.sessionId);
+      return {
+        _id: nextTerm._id,
+        name: nextTerm.name,
+        sessionId: nextTerm.sessionId,
+        sessionYearLabel: session?.yearLabel || "Unknown",
+        startDate: nextTerm.startDate,
+        endDate: nextTerm.endDate,
+      };
+    }
+    
+    // If no current or upcoming term, return null
+    return null;
+  },
+});
+
+/**
  * Get all courses for the department head's department
  */
 export const getDepartmentCourses = query({
