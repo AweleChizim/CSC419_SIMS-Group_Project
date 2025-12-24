@@ -58,7 +58,6 @@ function convertToCalendarEvents(courses: CourseSchedule[]): EventInput[] {
 
   courses.forEach((course, courseIndex) => {
     const colorKey = CALENDAR_COLORS[courseIndex % CALENDAR_COLORS.length];
-    const colorValue = calendarsEvents[colorKey as keyof typeof calendarsEvents];
     
     course.scheduleSlots.forEach((slot) => {
       const dayOffset = DAY_INDEX_MAP[slot.day];

@@ -51,7 +51,7 @@ export default function CourseDetailPage() {
     courseId ? { courseId } : 'skip'
   ) as CourseDetails | undefined;
 
-  // @ts-ignore - Convex API path with slashes
+  // @ts-expect-error - Convex API path with slashes
   const enrollMutation = useMutation(api["mutations/enrollmentMutations"].enroll);
 
   const isLoading = courseDetails === undefined;

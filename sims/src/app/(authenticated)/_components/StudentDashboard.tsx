@@ -69,7 +69,7 @@ export default function StudentDashboardView() {
     sessionToken ? { token: sessionToken } : "skip"
   ) as StudentStats | undefined;
 
-  // @ts-ignore - Convex API path with slashes
+  // @ts-expect-error - Convex API path with slashes
   const dropCourseMutation = useMutation(api["mutations/enrollmentMutations"].dropCourse);
 
   const isLoading = stats === undefined;
