@@ -104,12 +104,12 @@ export default function CoursesTable({ courses, isLoading }: CoursesTableProps) 
                 {course.programs && course.programs.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {course.programs.slice(0, 2).map((program) => (
-                      <Badge key={program._id} color="secondary" variant="light" size="sm">
+                      <Badge key={program._id} color="info" variant="light" size="sm">
                         {program.name}
                       </Badge>
                     ))}
                     {course.programs.length > 2 && (
-                      <Badge color="secondary" variant="light" size="sm">
+                      <Badge color="info" variant="light" size="sm">
                         +{course.programs.length - 2}
                       </Badge>
                     )}
@@ -123,7 +123,7 @@ export default function CoursesTable({ courses, isLoading }: CoursesTableProps) 
                   color={
                     course.status === 'C' ? 'primary' : 
                     course.status === 'R' ? 'success' : 
-                    'secondary'
+                    'light'
                   } 
                   variant="light" 
                   size="sm"
