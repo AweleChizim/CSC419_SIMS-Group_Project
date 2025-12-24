@@ -15,6 +15,7 @@ import {
   validateEnrollmentDomainChecks,
 } from "../lib/services/enrollmentService";
 import { logStudentEnrolled, logStudentDropped } from "../lib/services/auditLogService";
+import { validateSessionToken } from "../lib/session";
 
 /**
  * Operation: Enroll Student in a Section
@@ -85,6 +86,112 @@ export const enrollStudentInSection = mutation({
         termId: section.termId,
       }
     );
+
+    return {
+      success: true,
+      enrollmentId,
+      enrollmentCount: section.enrollmentCount + 1,
+    };
+  },
+});
+
+/**
+ * Enroll current student in a section
+ * 
+ * Simplified enrollment mutation that:
+ * 1. Gets student from authenticated user (via token)
+ * 2. Atomically checks if section has capacity
+ * 3. Prevents duplicate enrollment in same course/term
+ * 4. Creates enrollment with status 'active'
+ * 5. Increments section enrollment count
+ * 
+ * Input: sectionId (and optional token for authentication)
+ */
+export const enroll = mutation({
+  args: {
+    sectionId: v.id("sections"),
+    token: v.optional(v.string()), // Session token for authentication
+  },
+  handler: async (ctx, args) => {
+    // Step 1: Authenticate and get student
+    if (!args.token) {
+      throw new Error("Authentication required");
+    }
+
+    const userId = await validateSessionToken(ctx.db, args.token);
+    if (!userId) {
+      throw new Error("Invalid session token");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Verify user is a student
+    if (!user.roles.includes("student")) {
+      throw new Error("Only students can enroll in sections");
+    }
+
+    // Get student record
+    const student = await ctx.db
+      .query("students")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!student) {
+      throw new Error("Student record not found");
+    }
+
+    // Step 2: Get and validate section
+    const section = await ctx.db.get(args.sectionId);
+    if (!section) {
+      throw new NotFoundError("Section", args.sectionId);
+    }
+
+    // Atomic check: if section is full, throw error
+    if (section.enrollmentCount >= section.capacity) {
+      throw new Error("Section Full");
+    }
+
+    // Step 3: Check if student is already enrolled in any section of this course for the same term
+    const existingEnrollments = await ctx.db
+      .query("enrollments")
+      .withIndex("by_studentId", (q) => q.eq("studentId", student._id))
+      .collect();
+
+    // Check for duplicate enrollment in same course and term
+    for (const enrollment of existingEnrollments) {
+      const enrolledSection = await ctx.db.get(enrollment.sectionId);
+      if (
+        enrolledSection &&
+        enrolledSection.courseId === section.courseId &&
+        enrolledSection.termId === section.termId &&
+        (enrollment.status === "active" || enrollment.status === "enrolled" || enrollment.status === "waitlisted")
+      ) {
+        throw new Error("You have already enrolled for this course.");
+      }
+    }
+
+    // Step 4: Get term name for enrollment record
+    const term = await ctx.db.get(section.termId);
+    const termName = term ? term.name : undefined;
+
+    // Step 5: Create enrollment document
+    const enrollmentId = await ctx.db.insert("enrollments", {
+      studentId: student._id,
+      sectionId: args.sectionId,
+      sessionId: section.sessionId,
+      termId: section.termId,
+      status: "active",
+      enrolledAt: Date.now(),
+      term: termName,
+    });
+
+    // Step 6: Increment section enrollment count
+    await ctx.db.patch(args.sectionId, {
+      enrollmentCount: section.enrollmentCount + 1,
+    });
 
     return {
       success: true,

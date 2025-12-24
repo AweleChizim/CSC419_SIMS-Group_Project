@@ -199,6 +199,8 @@ export default defineSchema({
     termId: v.id("terms"), // AcademicPeriod: termId
     status: v.string(),
     enrolledAt: v.number(), // Unix timestamp
+    grade: v.optional(v.string()), // Optional grade (e.g., "A", "B+", "85")
+    term: v.optional(v.string()), // Optional term name as string
   })
     .index("by_studentId", ["studentId"])
     .index("by_sectionId", ["sectionId"])

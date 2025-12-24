@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/lib/convex';
 import { Id } from '@/lib/convex';
 import PageBreadCrumb from '@/components/common/PageBreadCrumb';
@@ -11,6 +11,7 @@ import { Table, TableHeader, TableBody, TableRow, TableCell } from '@/components
 import Loading from '@/components/loading/Loading';
 import Button from '@/components/ui/button/Button';
 import Badge from '@/components/ui/badge/Badge';
+import Alert from '@/components/ui/alert/Alert';
 
 type CourseDetails = {
   title: string;
@@ -29,18 +30,91 @@ export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.courseId as Id<'courses'>;
 
+  // Initialize session token from localStorage
+  const [sessionToken] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sims_session_token');
+    }
+    return null;
+  });
+
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
+  const [enrollingSectionId, setEnrollingSectionId] = useState<string | null>(null);
+
   // Fetch course details
   const courseDetails = useQuery(
     api.courses.getDetails,
     courseId ? { courseId } : 'skip'
   ) as CourseDetails | undefined;
 
+  // @ts-ignore - Convex API path with slashes
+  const enrollMutation = useMutation(api["mutations/enrollmentMutations"].enroll);
+
   const isLoading = courseDetails === undefined;
+
+  const handleEnroll = async (sectionId: string) => {
+    if (!sessionToken) {
+      setEnrollmentError('Authentication required. Please log in.');
+      return;
+    }
+
+    setEnrollingSectionId(sectionId);
+    setEnrollmentError(null);
+
+    try {
+      await enrollMutation({
+        sectionId: sectionId as Id<'sections'>,
+        token: sessionToken,
+      });
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+    } catch (error) {
+      let errorMessage = 'Failed to enroll in section';
+      
+      if (error instanceof Error) {
+        // Extract clean error message from Convex error
+        const fullMessage = error.message;
+        
+        // Look for user-friendly error messages
+        if (fullMessage.includes('You have already enrolled for this course')) {
+          errorMessage = 'You have already enrolled for this course.';
+        } else if (fullMessage.includes('Section Full')) {
+          errorMessage = 'This section is full.';
+        } else if (fullMessage.includes('Authentication required')) {
+          errorMessage = 'Authentication required. Please log in.';
+        } else if (fullMessage.includes('Invalid session token')) {
+          errorMessage = 'Your session has expired. Please log in again.';
+        } else if (fullMessage.includes('Only students can enroll')) {
+          errorMessage = 'Only students can enroll in sections.';
+        } else {
+          // Try to extract the error message after "Error: " or "Uncaught Error: "
+          const errorMatch = fullMessage.match(/(?:Uncaught )?Error:\s*(.+?)(?:\s+Called by client)?$/);
+          if (errorMatch && errorMatch[1]) {
+            errorMessage = errorMatch[1].trim();
+          } else {
+            // Fallback: use the full message but remove Convex prefixes
+            errorMessage = fullMessage.replace(/\[CONVEX[^\]]+\]\s*/g, '').replace(/\[Request ID:[^\]]+\]\s*/g, '').replace(/Server Error\s*/g, '').trim();
+          }
+        }
+      }
+      
+      setEnrollmentError(errorMessage);
+      setTimeout(() => setEnrollmentError(null), 5000);
+    } finally {
+      setEnrollingSectionId(null);
+    }
+  };
+
+  const breadcrumbItems = [
+    { name: 'Course', href: '/courses' },
+    { name: 'Course Details' }
+  ];
 
   if (isLoading) {
     return (
       <div>
-        <PageBreadCrumb pageTitle="Course Details" />
+        <PageBreadCrumb items={breadcrumbItems} />
         <div className="flex items-center justify-center py-12">
           <Loading />
         </div>
@@ -51,7 +125,7 @@ export default function CourseDetailPage() {
   if (!courseDetails) {
     return (
       <div>
-        <PageBreadCrumb pageTitle="Course Details" />
+        <PageBreadCrumb items={breadcrumbItems} />
         <div className="py-12 text-center text-gray-500 dark:text-gray-400">
           <p className="text-lg font-medium mb-2">Course not found</p>
         </div>
@@ -61,9 +135,15 @@ export default function CourseDetailPage() {
 
   return (
     <div>
-      <PageBreadCrumb pageTitle="Course Details" />
+      <PageBreadCrumb items={breadcrumbItems} />
 
       <div className="space-y-6">
+        {showSuccessMessage && (
+          <Alert variant="success" title="Success" message="Successfully enrolled in section!" />
+        )}
+        {enrollmentError && (
+          <Alert variant="error" title="Enrollment Error" message={enrollmentError} />
+        )}
         {/* Course Information */}
         <ComponentCard title={courseDetails.title}>
           <div className="space-y-4">
@@ -103,9 +183,6 @@ export default function CourseDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
-                      Section ID
-                    </TableCell>
-                    <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
                       Instructor
                     </TableCell>
                     <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
@@ -125,9 +202,6 @@ export default function CourseDetailPage() {
                 <TableBody>
                   {courseDetails.activeSections.map((section) => (
                     <TableRow key={section.sectionId}>
-                      <TableCell className="px-5 py-3 text-start font-medium">
-                        {section.sectionId.slice(-8)}
-                      </TableCell>
                       <TableCell className="px-5 py-3 text-start">
                         {section.instructor}
                       </TableCell>
@@ -150,9 +224,10 @@ export default function CourseDetailPage() {
                         <Button
                           size="sm"
                           variant="primary"
-                          disabled={true}
+                          disabled={section.seatsAvailable <= 0 || enrollingSectionId === section.sectionId}
+                          onClick={() => handleEnroll(section.sectionId)}
                         >
-                          Register
+                          {enrollingSectionId === section.sectionId ? 'Enrolling...' : 'Enroll'}
                         </Button>
                       </TableCell>
                     </TableRow>
