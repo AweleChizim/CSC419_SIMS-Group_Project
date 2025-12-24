@@ -43,13 +43,6 @@ type Term = {
   endDate: number;
 };
 
-type AcademicSession = {
-  _id: Id<'academicSessions'>;
-  yearLabel: string;
-  startDate: number;
-  endDate: number;
-};
-
 export default function SectionsPage() {
   // Initialize session token from localStorage
   const [sessionToken] = useState<string | null>(() => {
@@ -91,7 +84,10 @@ export default function SectionsPage() {
   // Set default term to current/next term if no term is selected
   useEffect(() => {
     if (currentOrNextTerm && !selectedTermId) {
-      setSelectedTermId(currentOrNextTerm._id);
+      // Use setTimeout to avoid calling setState synchronously within effect
+      setTimeout(() => {
+        setSelectedTermId(currentOrNextTerm._id);
+      }, 0);
     }
   }, [currentOrNextTerm, selectedTermId]);
 
@@ -140,8 +136,9 @@ export default function SectionsPage() {
       });
       setPublishMessage(`Successfully published ${result.count} section(s)`);
       setTimeout(() => setPublishMessage(null), 3000);
-    } catch (error: any) {
-      setPublishErrorMessage(error.message || 'Failed to publish sections');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to publish sections';
+      setPublishErrorMessage(errorMessage);
       setTimeout(() => setPublishErrorMessage(null), 5000);
     }
   };

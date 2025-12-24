@@ -46,7 +46,6 @@ export default function SectionsTable({
   sections, 
   isLoading, 
   sessionToken,
-  selectedTermId,
   onAssignmentChange,
   onSectionDeleted
 }: SectionsTableProps) {
@@ -119,9 +118,10 @@ export default function SectionsTable({
       if (onSectionDeleted) {
         onSectionDeleted();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete section:', error);
-      alert(error.message || 'Failed to delete section');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete section';
+      alert(errorMessage);
     } finally {
       setDeletingSectionId(null);
     }

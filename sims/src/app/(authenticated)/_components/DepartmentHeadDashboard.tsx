@@ -46,8 +46,6 @@ export default function DepartmentHeadDashboard() {
     return null;
   });
 
-  const [selectedTermId, setSelectedTermId] = useState<Id<"terms"> | undefined>(undefined);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Fetch dashboard stats
   const stats = useQuery(
@@ -61,7 +59,6 @@ export default function DepartmentHeadDashboard() {
     sessionToken
       ? {
           token: sessionToken,
-          termId: selectedTermId,
         }
       : "skip"
   ) as Section[] | undefined;
@@ -70,11 +67,6 @@ export default function DepartmentHeadDashboard() {
   const terms = useQuery(api.department.getTerms) as Term[] | undefined;
 
   const isLoading = stats === undefined || sections === undefined || terms === undefined;
-
-  const handleCreateSuccess = () => {
-    setIsCreateModalOpen(false);
-    // The query will automatically refetch
-  };
 
   // Calculate assignment progress percentage
   const assignmentProgress = stats

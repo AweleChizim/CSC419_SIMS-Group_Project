@@ -10,7 +10,6 @@ import { v } from "convex/values";
 import { validateSessionToken } from "./lib/session";
 import { NotFoundError, ValidationError } from "./lib/errors";
 import { Id } from "./_generated/dataModel";
-import { internal } from "./_generated/api";
 
 /**
  * Get dashboard statistics for department head

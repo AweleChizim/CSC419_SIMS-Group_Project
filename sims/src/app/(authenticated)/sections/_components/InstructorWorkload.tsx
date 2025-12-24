@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/lib/convex';
 import { Id } from '@/lib/convex';

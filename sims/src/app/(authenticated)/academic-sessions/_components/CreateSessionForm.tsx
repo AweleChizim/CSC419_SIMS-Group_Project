@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@/lib/convex';
 import { Modal } from '@/components/ui/modal';

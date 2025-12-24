@@ -171,9 +171,9 @@ export default function CreateSectionModal({
       });
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       const message =
-        error?.message || "Failed to create section. Please try again.";
+        error instanceof Error ? error.message : "Failed to create section. Please try again.";
       setApiError(message);
     } finally {
       setIsLoading(false);
@@ -283,7 +283,7 @@ export default function CreateSectionModal({
                   )}
                   {showCourseDropdown && courseSearchQuery.trim() && filteredCourses.length === 0 && (
                     <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500 shadow-lg dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                      No courses found matching "{courseSearchQuery}"
+                      No courses found matching &quot;{courseSearchQuery}&quot;
                     </div>
                   )}
                 </div>

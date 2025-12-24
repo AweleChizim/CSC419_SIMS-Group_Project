@@ -37,7 +37,6 @@ interface TermPlannerProps {
 
 export default function TermPlanner({ 
   sessionToken, 
-  selectedTermId,
   onSuccess 
 }: TermPlannerProps) {
   const [selectedTargetTermId, setSelectedTargetTermId] = useState<Id<'terms'> | undefined>(undefined);
@@ -63,7 +62,8 @@ export default function TermPlanner({
   const cloneSectionsFromTerm = useMutation(api.department.cloneSectionsFromTerm);
 
   // Filter terms to show only upcoming terms (startDate > now)
-  const now = Date.now();
+  // Use useState to avoid calling Date.now() during render
+  const [now] = useState(() => Date.now());
   const upcomingTerms = terms?.filter((term) => term.startDate > now) || [];
   const pastTerms = terms?.filter((term) => term.endDate < now) || [];
 
@@ -86,8 +86,9 @@ export default function TermPlanner({
       setShowBulkCreate(false);
       setTimeout(() => setSuccessMessage(null), 3000);
       onSuccess?.();
-    } catch (error: any) {
-      setErrorMessage(error.message || 'Failed to create sections');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create sections';
+      setErrorMessage(errorMessage);
       setTimeout(() => setErrorMessage(null), 5000);
     }
   };
@@ -116,8 +117,9 @@ export default function TermPlanner({
       setSelectedSourceTermId(undefined);
       setTimeout(() => setSuccessMessage(null), 3000);
       onSuccess?.();
-    } catch (error: any) {
-      setErrorMessage(error.message || 'Failed to copy sections');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to copy sections';
+      setErrorMessage(errorMessage);
       setTimeout(() => setErrorMessage(null), 5000);
     }
   };
@@ -137,11 +139,6 @@ export default function TermPlanner({
       setSelectedCourseIds(courses?.map((c) => c._id) || []);
     }
   };
-
-  const termOptions = terms?.map((term) => ({
-    value: term._id,
-    label: `${term.name} (${term.sessionYearLabel})`,
-  })) || [];
 
   const sourceTermOptions = pastTerms.map((term) => ({
     value: term._id,
@@ -283,7 +280,7 @@ export default function TermPlanner({
                     <Label>Select Courses:</Label>
                     <Button
                       size="sm"
-                      variant="ghost"
+                      variant="text-only"
                       onClick={handleSelectAllCourses}
                     >
                       {selectedCourseIds.length === courses.length ? 'Deselect All' : 'Select All'}
