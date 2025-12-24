@@ -259,6 +259,7 @@ export const getSections = query({
           status: isValidInstructor ? "Active" : "Unassigned",
           termId: section.termId,
           termName: term?.name || "Unknown",
+          isOpenForEnrollment: section.isOpenForEnrollment ?? false,
         };
       })
     );
@@ -368,6 +369,7 @@ export const createSection = mutation({
       capacity: args.capacity,
       scheduleSlots: [], // Empty initially, can be added later
       enrollmentCount: 0,
+      isOpenForEnrollment: false, // New sections start as Draft
     });
 
     return { success: true, sectionId };
@@ -891,6 +893,311 @@ export const removeInstructor = mutation({
     });
 
     return { success: true };
+  },
+});
+
+/**
+ * Bulk create sections for multiple courses
+ * Creates a section for each course ID with default capacity of 50
+ */
+export const bulkCreateSections = mutation({
+  args: {
+    token: v.optional(v.string()),
+    courseIds: v.array(v.id("courses")),
+    termId: v.id("terms"),
+    capacity: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    // Validate session token and get user
+    if (!args.token) {
+      throw new ValidationError("token", "Authentication required");
+    }
+
+    const userId = await validateSessionToken(ctx.db, args.token);
+    if (!userId) {
+      throw new ValidationError("token", "Invalid session token");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new NotFoundError("User", userId);
+    }
+
+    // Verify role is department_head
+    if (!user.roles.includes("department_head")) {
+      throw new Error("Access denied: Department head role required");
+    }
+
+    // Find department where this user is the head
+    const department = await ctx.db
+      .query("departments")
+      .withIndex("by_headId", (q) => q.eq("headId", userId))
+      .first();
+
+    if (!department) {
+      throw new Error("Department not found for this user");
+    }
+
+    // Validate term exists
+    const term = await ctx.db.get(args.termId);
+    if (!term) {
+      throw new NotFoundError("Term", args.termId);
+    }
+
+    // Get session from term
+    const session = await ctx.db.get(term.sessionId);
+    if (!session) {
+      throw new NotFoundError("Academic Session", term.sessionId);
+    }
+
+    const defaultCapacity = args.capacity || 50;
+    if (defaultCapacity <= 0) {
+      throw new ValidationError("capacity", "Capacity must be greater than 0");
+    }
+
+    const createdSectionIds: Id<"sections">[] = [];
+
+    // Create sections for each course
+    for (const courseId of args.courseIds) {
+      // Validate that courseId belongs to this department
+      const course = await ctx.db.get(courseId);
+      if (!course) {
+        throw new NotFoundError("Course", courseId);
+      }
+
+      if (course.departmentId !== department._id) {
+        throw new ValidationError(
+          "courseIds",
+          `Course ${course.code} does not belong to your department`
+        );
+      }
+
+      // Check if section already exists for this course and term
+      const existingSection = await ctx.db
+        .query("sections")
+        .withIndex("by_courseId_termId", (q) =>
+          q.eq("courseId", courseId).eq("termId", args.termId)
+        )
+        .first();
+
+      if (existingSection) {
+        // Skip if section already exists
+        continue;
+      }
+
+      // Create the section
+      const sectionId = await ctx.db.insert("sections", {
+        courseId,
+        sessionId: term.sessionId,
+        termId: args.termId,
+        instructorId: userId, // Use department head as placeholder
+        capacity: defaultCapacity,
+        scheduleSlots: [],
+        enrollmentCount: 0,
+        isOpenForEnrollment: false, // New sections start as Draft
+      });
+
+      createdSectionIds.push(sectionId);
+    }
+
+    return { success: true, sectionIds: createdSectionIds, count: createdSectionIds.length };
+  },
+});
+
+/**
+ * Clone sections from a source term to a target term
+ * Optionally keeps or clears instructor assignments
+ */
+export const cloneSectionsFromTerm = mutation({
+  args: {
+    token: v.optional(v.string()),
+    sourceTermId: v.id("terms"),
+    targetTermId: v.id("terms"),
+    keepInstructors: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    // Validate session token and get user
+    if (!args.token) {
+      throw new ValidationError("token", "Authentication required");
+    }
+
+    const userId = await validateSessionToken(ctx.db, args.token);
+    if (!userId) {
+      throw new ValidationError("token", "Invalid session token");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new NotFoundError("User", userId);
+    }
+
+    // Verify role is department_head
+    if (!user.roles.includes("department_head")) {
+      throw new Error("Access denied: Department head role required");
+    }
+
+    // Find department where this user is the head
+    const department = await ctx.db
+      .query("departments")
+      .withIndex("by_headId", (q) => q.eq("headId", userId))
+      .first();
+
+    if (!department) {
+      throw new Error("Department not found for this user");
+    }
+
+    // Validate both terms exist
+    const sourceTerm = await ctx.db.get(args.sourceTermId);
+    if (!sourceTerm) {
+      throw new NotFoundError("Source Term", args.sourceTermId);
+    }
+
+    const targetTerm = await ctx.db.get(args.targetTermId);
+    if (!targetTerm) {
+      throw new NotFoundError("Target Term", args.targetTermId);
+    }
+
+    // Get session from target term
+    const targetSession = await ctx.db.get(targetTerm.sessionId);
+    if (!targetSession) {
+      throw new NotFoundError("Academic Session", targetTerm.sessionId);
+    }
+
+    // Get all courses in this department
+    const departmentCourses = await ctx.db
+      .query("courses")
+      .withIndex("by_departmentId", (q) => q.eq("departmentId", department._id))
+      .collect();
+
+    const courseIds = departmentCourses.map((c) => c._id);
+
+    // Get all sections from source term for this department
+    const sourceSections = await ctx.db
+      .query("sections")
+      .withIndex("by_termId", (q) => q.eq("termId", args.sourceTermId))
+      .collect();
+
+    const departmentSourceSections = sourceSections.filter((section) =>
+      courseIds.includes(section.courseId)
+    );
+
+    const clonedSectionIds: Id<"sections">[] = [];
+
+    // Clone each section
+    for (const sourceSection of departmentSourceSections) {
+      // Check if section already exists for this course and target term
+      const existingSection = await ctx.db
+        .query("sections")
+        .withIndex("by_courseId_termId", (q) =>
+          q.eq("courseId", sourceSection.courseId).eq("termId", args.targetTermId)
+        )
+        .first();
+
+      if (existingSection) {
+        // Skip if section already exists
+        continue;
+      }
+
+      // Determine instructor ID based on keepInstructors flag
+      let instructorIdToUse: Id<"users"> = userId; // Default to department head
+      if (args.keepInstructors && sourceSection.instructorId) {
+        // Validate instructor still exists and has instructor role
+        const instructor = await ctx.db.get(sourceSection.instructorId);
+        if (instructor && instructor.roles.includes("instructor")) {
+          instructorIdToUse = sourceSection.instructorId;
+        }
+      }
+
+      // Create the cloned section
+      const sectionId = await ctx.db.insert("sections", {
+        courseId: sourceSection.courseId,
+        sessionId: targetTerm.sessionId,
+        termId: args.targetTermId,
+        instructorId: instructorIdToUse,
+        capacity: sourceSection.capacity,
+        scheduleSlots: sourceSection.scheduleSlots, // Copy schedule slots
+        enrollmentCount: 0, // Reset enrollment count
+        isOpenForEnrollment: false, // Cloned sections start as Draft
+      });
+
+      clonedSectionIds.push(sectionId);
+    }
+
+    return { success: true, sectionIds: clonedSectionIds, count: clonedSectionIds.length };
+  },
+});
+
+/**
+ * Publish sections by setting isOpenForEnrollment to true
+ * Makes sections available in the Student Catalog
+ */
+export const publishSections = mutation({
+  args: {
+    token: v.optional(v.string()),
+    sectionIds: v.array(v.id("sections")),
+  },
+  handler: async (ctx, args) => {
+    // Validate session token and get user
+    if (!args.token) {
+      throw new ValidationError("token", "Authentication required");
+    }
+
+    const userId = await validateSessionToken(ctx.db, args.token);
+    if (!userId) {
+      throw new ValidationError("token", "Invalid session token");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new NotFoundError("User", userId);
+    }
+
+    // Verify role is department_head
+    if (!user.roles.includes("department_head")) {
+      throw new Error("Access denied: Department head role required");
+    }
+
+    // Find department where this user is the head
+    const department = await ctx.db
+      .query("departments")
+      .withIndex("by_headId", (q) => q.eq("headId", userId))
+      .first();
+
+    if (!department) {
+      throw new Error("Department not found for this user");
+    }
+
+    // Get all courses in this department
+    const departmentCourses = await ctx.db
+      .query("courses")
+      .withIndex("by_departmentId", (q) => q.eq("departmentId", department._id))
+      .collect();
+
+    const courseIds = departmentCourses.map((c) => c._id);
+
+    let publishedCount = 0;
+
+    // Publish each section (only if it belongs to this department)
+    for (const sectionId of args.sectionIds) {
+      const section = await ctx.db.get(sectionId);
+      if (!section) {
+        continue; // Skip if section doesn't exist
+      }
+
+      // Verify section belongs to this department
+      if (!courseIds.includes(section.courseId)) {
+        continue; // Skip sections not in this department
+      }
+
+      // Update section to be open for enrollment
+      await ctx.db.patch(sectionId, {
+        isOpenForEnrollment: true,
+      });
+
+      publishedCount++;
+    }
+
+    return { success: true, count: publishedCount };
   },
 });
 

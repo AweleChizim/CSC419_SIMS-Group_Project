@@ -21,6 +21,7 @@ type Section = {
   status: string;
   termId: Id<'terms'>;
   termName: string;
+  isOpenForEnrollment: boolean;
 };
 
 type Instructor = {
@@ -128,7 +129,10 @@ export default function SectionsTable({
               Capacity
             </TableCell>
             <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
-              Status
+              Assignment Status
+            </TableCell>
+            <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
+              Publication Status
             </TableCell>
             <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
               Term
@@ -198,6 +202,17 @@ export default function SectionsTable({
                     }`}
                   >
                     {section.status}
+                  </span>
+                </TableCell>
+                <TableCell className="px-5 py-3 text-start">
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      section.isOpenForEnrollment
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+                    }`}
+                  >
+                    {section.isOpenForEnrollment ? "Published" : "Draft"}
                   </span>
                 </TableCell>
                 <TableCell className="px-5 py-3 text-start text-sm text-gray-600 dark:text-gray-400">

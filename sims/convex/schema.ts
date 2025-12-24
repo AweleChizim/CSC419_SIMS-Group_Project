@@ -127,6 +127,7 @@ export default defineSchema({
       })
     ),
     enrollmentCount: v.number(),
+    isOpenForEnrollment: v.optional(v.boolean()), // Whether section is published and open for student enrollment
   })
     .index("by_courseId", ["courseId"])
     .index("by_termId", ["termId"])

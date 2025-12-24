@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/lib/convex';
 import { Id } from '@/lib/convex';
 import PageBreadCrumb from '@/components/common/PageBreadCrumb';
@@ -16,6 +16,7 @@ import { RoleGuard } from '@/components/auth/RoleGuard';
 import SectionsTable from './_components/SectionsTable';
 import CreateSectionModal from './_components/CreateSectionModal';
 import InstructorWorkload from './_components/InstructorWorkload';
+import TermPlanner from './_components/TermPlanner';
 
 type Section = {
   _id: Id<'sections'>;
@@ -29,6 +30,7 @@ type Section = {
   status: string;
   termId: Id<'terms'>;
   termName: string;
+  isOpenForEnrollment: boolean;
 };
 
 type Term = {
@@ -59,6 +61,10 @@ export default function SectionsPage() {
   const [selectedTermId, setSelectedTermId] = useState<Id<'terms'> | undefined>(undefined);
   const createModal = useModal();
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [publishMessage, setPublishMessage] = useState<string | null>(null);
+  const [publishErrorMessage, setPublishErrorMessage] = useState<string | null>(null);
+
+  const publishSections = useMutation(api.department.publishSections);
 
   // Fetch current or next active term
   const currentOrNextTerm = useQuery(api.department.getCurrentOrNextTerm) as Term | null | undefined;
@@ -93,6 +99,38 @@ export default function SectionsPage() {
     createModal.closeModal();
   };
 
+  const handlePublishAllReady = async () => {
+    if (!sessionToken || !sections || sections.length === 0) {
+      setPublishErrorMessage('No sections available to publish');
+      setTimeout(() => setPublishErrorMessage(null), 3000);
+      return;
+    }
+
+    // Filter sections that are ready to publish (have instructor assigned and are in Draft status)
+    const readySections = sections.filter(
+      (section) => section.status === 'Active' && !section.isOpenForEnrollment
+    );
+
+    if (readySections.length === 0) {
+      setPublishErrorMessage('No sections ready to publish. Sections must have an assigned instructor.');
+      setTimeout(() => setPublishErrorMessage(null), 3000);
+      return;
+    }
+
+    try {
+      setPublishErrorMessage(null);
+      const result = await publishSections({
+        token: sessionToken,
+        sectionIds: readySections.map((s) => s._id),
+      });
+      setPublishMessage(`Successfully published ${result.count} section(s)`);
+      setTimeout(() => setPublishMessage(null), 3000);
+    } catch (error: any) {
+      setPublishErrorMessage(error.message || 'Failed to publish sections');
+      setTimeout(() => setPublishErrorMessage(null), 5000);
+    }
+  };
+
   const termOptions = [
     { value: '', label: 'All Terms' },
     ...(terms?.map((term) => ({
@@ -110,6 +148,19 @@ export default function SectionsPage() {
           {showSuccessMessage && (
             <Alert variant="success" title="Success" message="Section created successfully!" />
           )}
+          {publishMessage && (
+            <Alert variant="success" title="Success" message={publishMessage} />
+          )}
+          {publishErrorMessage && (
+            <Alert variant="error" title="Error" message={publishErrorMessage} />
+          )}
+
+          {/* Term Planner */}
+          <TermPlanner
+            sessionToken={sessionToken}
+            selectedTermId={effectiveTermId}
+            onSuccess={handleSuccess}
+          />
 
           {/* Filters and Create Button */}
           <ComponentCard title="Filters">
@@ -140,8 +191,18 @@ export default function SectionsPage() {
               </Button>
             </div>
           </ComponentCard>
-                    {/* Sections Table */}
-                    <ComponentCard title="Sections" desc="Manage course sections for your department">
+          {/* Sections Table */}
+          <ComponentCard title="Sections" desc="Manage course sections for your department">
+            <div className="mb-4 flex justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handlePublishAllReady}
+                disabled={!sessionToken || !sections || sections.length === 0}
+              >
+                Publish All Ready Sections
+              </Button>
+            </div>
             <SectionsTable 
               sections={sections} 
               isLoading={isLoading}
