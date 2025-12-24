@@ -1,16 +1,20 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/lib/convex';
 import { Id } from '@/lib/convex';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import Loading from '@/components/loading/Loading';
-import { FileIcon } from '@/icons';
+import Select from '@/components/form/Select';
+import { FileIcon, AlertIcon } from '@/icons';
 
 type Section = {
   _id: Id<'sections'>;
   courseCode: string;
   courseTitle: string;
   sectionId: Id<'sections'>;
+  instructorId: Id<'users'> | null;
   instructorName: string;
   capacity: number;
   enrollmentCount: number;
@@ -19,12 +23,67 @@ type Section = {
   termName: string;
 };
 
+type Instructor = {
+  _id: Id<'users'>;
+  name: string;
+  email: string;
+};
+
 interface SectionsTableProps {
   sections: Section[] | undefined;
   isLoading: boolean;
+  sessionToken: string | null;
+  selectedTermId: Id<'terms'> | undefined;
 }
 
-export default function SectionsTable({ sections, isLoading }: SectionsTableProps) {
+export default function SectionsTable({ 
+  sections, 
+  isLoading, 
+  sessionToken,
+  selectedTermId 
+}: SectionsTableProps) {
+  const [assigningSectionId, setAssigningSectionId] = useState<Id<'sections'> | null>(null);
+
+  // Fetch department instructors
+  const instructors = useQuery(
+    api.department.getDepartmentInstructors,
+    sessionToken ? { token: sessionToken } : 'skip'
+  ) as Instructor[] | undefined;
+
+  const assignInstructor = useMutation(api.department.assignInstructor);
+  const removeInstructor = useMutation(api.department.removeInstructor);
+
+  const handleInstructorChange = async (
+    sectionId: Id<'sections'>,
+    instructorId: string
+  ) => {
+    if (!sessionToken) return;
+
+    setAssigningSectionId(sectionId);
+
+    try {
+      if (instructorId === '') {
+        // Remove instructor
+        await removeInstructor({
+          token: sessionToken,
+          sectionId,
+        });
+      } else {
+        // Assign instructor
+        await assignInstructor({
+          token: sessionToken,
+          sectionId,
+          instructorId: instructorId as Id<'users'>,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to assign instructor:', error);
+      // You could add toast notification here
+    } finally {
+      setAssigningSectionId(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -43,6 +102,14 @@ export default function SectionsTable({ sections, isLoading }: SectionsTableProp
     );
   }
 
+  const instructorOptions = [
+    { value: '', label: 'Unassigned' },
+    ...(instructors?.map((instructor) => ({
+      value: instructor._id,
+      label: instructor.name,
+    })) || []),
+  ];
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -58,7 +125,7 @@ export default function SectionsTable({ sections, isLoading }: SectionsTableProp
               Section ID
             </TableCell>
             <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
-              Current Instructor
+              Instructor
             </TableCell>
             <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
               Capacity
@@ -72,42 +139,81 @@ export default function SectionsTable({ sections, isLoading }: SectionsTableProp
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sections.map((section) => (
-            <TableRow key={section._id}>
-              <TableCell className="px-5 py-3 text-start font-medium">
-                {section.courseCode}
-              </TableCell>
-              <TableCell className="px-5 py-3 text-start">
-                {section.courseTitle}
-              </TableCell>
-              <TableCell className="px-5 py-3 text-start text-sm text-gray-600 dark:text-gray-400">
-                {section.sectionId.slice(-8)}
-              </TableCell>
-              <TableCell className="px-5 py-3 text-start">
-                {section.instructorName}
-              </TableCell>
-              <TableCell className="px-5 py-3 text-start">
-                {section.enrollmentCount} / {section.capacity}
-              </TableCell>
-              <TableCell className="px-5 py-3 text-start">
-                <span
-                  className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    section.status === "Active"
-                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                  }`}
-                >
-                  {section.status}
-                </span>
-              </TableCell>
-              <TableCell className="px-5 py-3 text-start text-sm text-gray-600 dark:text-gray-400">
-                {section.termName}
-              </TableCell>
-            </TableRow>
-          ))}
+          {sections.map((section) => {
+            const isUnassigned = section.status === 'Unassigned';
+            const isAssigning = assigningSectionId === section._id;
+
+            return (
+              <TableRow
+                key={section._id}
+                className={`${
+                  isUnassigned
+                    ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800'
+                    : ''
+                } ${isAssigning ? 'opacity-50' : ''}`}
+              >
+                <TableCell className="px-5 py-3 text-start font-medium">
+                  <div className="flex items-center gap-2">
+                    {isUnassigned && (
+                      <AlertIcon className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                    )}
+                    {section.courseCode}
+                  </div>
+                </TableCell>
+                <TableCell className="px-5 py-3 text-start">
+                  {section.courseTitle}
+                </TableCell>
+                <TableCell className="px-5 py-3 text-start text-sm text-gray-600 dark:text-gray-400">
+                  {section.sectionId.slice(-8)}
+                </TableCell>
+                <TableCell className="px-5 py-3 text-start">
+                  <div className="relative w-full min-w-[180px]">
+                    <Select
+                      options={instructorOptions}
+                      placeholder="Select instructor"
+                      onChange={(e) => handleInstructorChange(section._id, e.target.value)}
+                      defaultValue={section.instructorId || ''}
+                      disabled={isAssigning || !sessionToken}
+                    />
+                    <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className="px-5 py-3 text-start">
+                  {section.enrollmentCount} / {section.capacity}
+                </TableCell>
+                <TableCell className="px-5 py-3 text-start">
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      section.status === "Active"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                    }`}
+                  >
+                    {section.status}
+                  </span>
+                </TableCell>
+                <TableCell className="px-5 py-3 text-start text-sm text-gray-600 dark:text-gray-400">
+                  {section.termName}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
   );
 }
-

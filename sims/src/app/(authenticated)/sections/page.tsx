@@ -15,12 +15,14 @@ import { PlusIcon } from '@/icons';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import SectionsTable from './_components/SectionsTable';
 import CreateSectionModal from './_components/CreateSectionModal';
+import InstructorWorkload from './_components/InstructorWorkload';
 
 type Section = {
   _id: Id<'sections'>;
   courseCode: string;
   courseTitle: string;
   sectionId: Id<'sections'>;
+  instructorId: Id<'users'> | null;
   instructorName: string;
   capacity: number;
   enrollmentCount: number;
@@ -133,9 +135,17 @@ export default function SectionsPage() {
             </div>
           </ComponentCard>
 
+          {/* Instructor Workload */}
+          <InstructorWorkload sessionToken={sessionToken} />
+
           {/* Sections Table */}
           <ComponentCard title="Sections" desc="Manage course sections for your department">
-            <SectionsTable sections={sections} isLoading={isLoading} />
+            <SectionsTable 
+              sections={sections} 
+              isLoading={isLoading}
+              sessionToken={sessionToken}
+              selectedTermId={selectedTermId}
+            />
           </ComponentCard>
         </div>
 
