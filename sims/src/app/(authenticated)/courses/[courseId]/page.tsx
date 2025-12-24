@@ -81,6 +81,12 @@ export default function CourseDetailPage() {
           errorMessage = 'You have already enrolled for this course.';
         } else if (fullMessage.includes('Section Full')) {
           errorMessage = 'This section is full.';
+        } else if (fullMessage.includes('Missing prerequisites')) {
+          errorMessage = fullMessage.replace(/.*Missing prerequisites:\s*/, 'Missing prerequisites: ');
+        } else if (fullMessage.includes('Schedule conflicts')) {
+          errorMessage = fullMessage.replace(/.*Schedule conflicts with:\s*/, 'Schedule conflict: ');
+        } else if (fullMessage.includes('Enrollment deadline has passed')) {
+          errorMessage = fullMessage.replace(/.*Enrollment deadline has passed[^:]*:\s*/, 'Enrollment deadline has passed. ');
         } else if (fullMessage.includes('Authentication required')) {
           errorMessage = 'Authentication required. Please log in.';
         } else if (fullMessage.includes('Invalid session token')) {

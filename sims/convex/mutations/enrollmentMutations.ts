@@ -13,6 +13,9 @@ import {
 } from "../lib/aggregates";
 import {
   validateEnrollmentDomainChecks,
+  checkPrerequisites,
+  checkScheduleConflicts,
+  checkEnrollmentDeadline,
 } from "../lib/services/enrollmentService";
 import { logStudentEnrolled, logStudentDropped } from "../lib/services/auditLogService";
 import { validateSessionToken } from "../lib/session";
@@ -149,12 +152,22 @@ export const enroll = mutation({
       throw new NotFoundError("Section", args.sectionId);
     }
 
-    // Atomic check: if section is full, throw error
+    // Step 3: Business Rule Validations (must be done before capacity check)
+    // 3a. Check enrollment deadline
+    await checkEnrollmentDeadline(ctx.db);
+
+    // 3b. Check prerequisites (using past enrollments with status === 'completed')
+    await checkPrerequisites(ctx.db, student._id, section.courseId);
+
+    // 3c. Check time conflicts with active enrollments for current term
+    await checkScheduleConflicts(ctx.db, student._id, args.sectionId);
+
+    // Step 4: Atomic check: if section is full, throw error
     if (section.enrollmentCount >= section.capacity) {
       throw new Error("Section Full");
     }
 
-    // Step 3: Check if student is already enrolled in any section of this course for the same term
+    // Step 5: Check if student is already enrolled in any section of this course for the same term
     const existingEnrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_studentId", (q) => q.eq("studentId", student._id))
@@ -173,11 +186,11 @@ export const enroll = mutation({
       }
     }
 
-    // Step 4: Get term name for enrollment record
+    // Step 6: Get term name for enrollment record
     const term = await ctx.db.get(section.termId);
     const termName = term ? term.name : undefined;
 
-    // Step 5: Create enrollment document
+    // Step 7: Create enrollment document
     const enrollmentId = await ctx.db.insert("enrollments", {
       studentId: student._id,
       sectionId: args.sectionId,
@@ -188,7 +201,7 @@ export const enroll = mutation({
       term: termName,
     });
 
-    // Step 6: Increment section enrollment count
+    // Step 8: Increment section enrollment count
     await ctx.db.patch(args.sectionId, {
       enrollmentCount: section.enrollmentCount + 1,
     });

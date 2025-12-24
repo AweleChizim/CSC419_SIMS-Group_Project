@@ -373,5 +373,16 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_userId_read", ["userId", "read"])
     .index("by_createdAt", ["createdAt"]),
+
+  /**
+   * Settings Collection
+   * Represents system-wide configuration settings
+   */
+  settings: defineTable({
+    key: v.string(),
+    value: v.any(),
+    updatedAt: v.number(), // Unix timestamp
+  })
+    .index("by_key", ["key"]),
 });
 
