@@ -6,10 +6,6 @@ import { api } from "@/lib/convex";
 import { Id } from "@/lib/convex";
 import PageBreadCrumb from "@/components/common/PageBreadCrumb";
 import MetricCard from "@/components/common/MetricCard";
-import ComponentCard from "@/components/common/ComponentCard";
-import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
-import Button from "@/components/ui/button/Button";
-import Loading from "@/components/loading/Loading";
 import { UserIcon, GroupIcon, FileIcon } from "@/icons";
 
 type DashboardStats = {
@@ -23,6 +19,7 @@ type Section = {
   courseCode: string;
   courseTitle: string;
   sectionId: Id<"sections">;
+  instructorId: Id<"users"> | null;
   instructorName: string;
   capacity: number;
   enrollmentCount: number;
@@ -118,135 +115,6 @@ export default function DepartmentHeadDashboard() {
               description="Sections needing instructor assignment"
             />
           </div>
-
-          {/* Sections Table */}
-          <ComponentCard
-            title="Sections"
-            desc="Manage course sections for your department"
-          >
-            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Filter by Term:
-                </label>
-                <select
-                  value={selectedTermId || ""}
-                  onChange={(e) =>
-                    setSelectedTermId(
-                      e.target.value ? (e.target.value as Id<"terms">) : undefined
-                    )
-                  }
-                  className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                >
-                  <option value="">All Terms</option>
-                  {terms?.map((term) => (
-                    <option key={term._id} value={term._id}>
-                      {term.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button
-                size="sm"
-                onClick={() => setIsCreateModalOpen(true)}
-                startIcon={
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                }
-              >
-                Create Section
-              </Button>
-            </div>
-
-            {sections && sections.length === 0 ? (
-              <div className="py-12 text-center text-gray-500 dark:text-gray-400">
-                <FileIcon className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                <p>No sections found</p>
-                {selectedTermId && (
-                  <p className="mt-2 text-sm">Try selecting a different term</p>
-                )}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableCell
-                        isHeader
-                        className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Course Code
-                      </TableCell>
-                      <TableCell
-                        isHeader
-                        className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Section ID
-                      </TableCell>
-                      <TableCell
-                        isHeader
-                        className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Current Instructor
-                      </TableCell>
-                      <TableCell
-                        isHeader
-                        className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Capacity
-                      </TableCell>
-                      <TableCell
-                        isHeader
-                        className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400"
-                      >
-                        Status
-                      </TableCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sections?.map((section) => (
-                      <TableRow key={section._id}>
-                        <TableCell className="px-5 py-3 text-start font-medium">
-                          {section.courseCode}
-                        </TableCell>
-                        <TableCell className="px-5 py-3 text-start">
-                          {section.sectionId.slice(-8)}
-                        </TableCell>
-                        <TableCell className="px-5 py-3 text-start">
-                          {section.instructorName}
-                        </TableCell>
-                        <TableCell className="px-5 py-3 text-start">
-                          {section.enrollmentCount} / {section.capacity}
-                        </TableCell>
-                        <TableCell className="px-5 py-3 text-start">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              section.status === "Active"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                                : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                            }`}
-                          >
-                            {section.status}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </ComponentCard>
         </div>
       ) : (
         <div className="py-12 text-center text-gray-500 dark:text-gray-400">

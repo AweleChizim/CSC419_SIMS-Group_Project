@@ -64,25 +64,49 @@ export const getDashboardStats = query({
       courseIds.includes(section.courseId)
     );
 
-    // Count unique instructors teaching in this department
-    const instructorIds = new Set<Id<"users">>();
+    // Count instructors in this department from the instructors table
+    const departmentInstructors = await ctx.db
+      .query("instructors")
+      .withIndex("by_departmentId", (q) => q.eq("departmentId", department._id))
+      .collect();
+    const totalInstructors = departmentInstructors.length;
+
+    // Get Institute of Humanities department for validation (used for both active and unassigned counts)
+    const humanitiesDepartment = await ctx.db
+      .query("departments")
+      .withIndex("by_name", (q) => q.eq("name", "Institute of Humanities"))
+      .first();
+
+    // Count active sections (sections with valid instructor from department OR Institute of Humanities)
+    let activeCount = 0;
     for (const section of departmentSections) {
       if (section.instructorId) {
         const instructor = await ctx.db.get(section.instructorId);
         if (instructor && instructor.roles.includes("instructor")) {
-          instructorIds.add(section.instructorId);
+          const instructorRecord = await ctx.db
+            .query("instructors")
+            .withIndex("by_userId", (q) => q.eq("userId", section.instructorId))
+            .first();
+          
+          if (instructorRecord) {
+            const belongsToDepartment = instructorRecord.departmentId === department._id;
+            const belongsToHumanities = humanitiesDepartment 
+              ? instructorRecord.departmentId === humanitiesDepartment._id
+              : false;
+            
+            if (belongsToDepartment || belongsToHumanities) {
+              activeCount++;
+            }
+          }
         }
       }
     }
-    const totalInstructors = instructorIds.size;
-
-    // Count active sections (sections with valid instructorId)
-    const activeSections = departmentSections.filter(
-      (section) => section.instructorId
-    ).length;
+    const activeSections = activeCount;
 
     // Count unassigned sections (sections without instructorId or with invalid instructor)
+    // Also check if assigned instructor belongs to the department OR Institute of Humanities
     let unassignedCount = 0;
+    
     for (const section of departmentSections) {
       if (!section.instructorId) {
         unassignedCount++;
@@ -90,6 +114,29 @@ export const getDashboardStats = query({
         const instructor = await ctx.db.get(section.instructorId);
         if (!instructor || !instructor.roles.includes("instructor")) {
           unassignedCount++;
+        } else {
+          // Check if instructor belongs to this department OR Institute of Humanities
+          const instructorRecord = await ctx.db
+            .query("instructors")
+            .withIndex("by_userId", (q) => q.eq("userId", section.instructorId))
+            .first();
+          
+          if (!instructorRecord) {
+            unassignedCount++;
+          } else {
+            // Check if instructor belongs to department head's department
+            const belongsToDepartment = instructorRecord.departmentId === department._id;
+            
+            // Check if instructor belongs to Institute of Humanities
+            const belongsToHumanities = humanitiesDepartment 
+              ? instructorRecord.departmentId === humanitiesDepartment._id
+              : false;
+            
+            // Only count as unassigned if instructor doesn't belong to either department
+            if (!belongsToDepartment && !belongsToHumanities) {
+              unassignedCount++;
+            }
+          }
         }
       }
     }
@@ -168,10 +215,37 @@ export const getSections = query({
           ? await ctx.db.get(section.instructorId)
           : null;
 
-        const isValidInstructor = instructor && instructor.roles.includes("instructor");
-        const instructorName = isValidInstructor
-          ? `${instructor.profile.firstName} ${instructor.profile.lastName}`
-          : "Unassigned";
+        // Check if instructor is valid and belongs to this department
+        let isValidInstructor = false;
+        let instructorName = "Unassigned";
+        
+        if (instructor && instructor.roles.includes("instructor")) {
+          const instructorRecord = await ctx.db
+            .query("instructors")
+            .withIndex("by_userId", (q) => q.eq("userId", section.instructorId))
+            .first();
+          
+          if (instructorRecord) {
+            // Check if instructor belongs to department head's department
+            const belongsToDepartment = instructorRecord.departmentId === department._id;
+            
+            // Also check if instructor belongs to Institute of Humanities
+            const humanitiesDepartment = await ctx.db
+              .query("departments")
+              .withIndex("by_name", (q) => q.eq("name", "Institute of Humanities"))
+              .first();
+            
+            const belongsToHumanities = humanitiesDepartment 
+              ? instructorRecord.departmentId === humanitiesDepartment._id
+              : false;
+            
+            isValidInstructor = belongsToDepartment || belongsToHumanities;
+            
+            if (isValidInstructor) {
+              instructorName = `${instructor.profile.firstName} ${instructor.profile.lastName}`;
+            }
+          }
+        }
 
         return {
           _id: section._id,
@@ -441,15 +515,20 @@ export const getInstructorWorkload = query({
       }
     }
 
-    // Get all instructors in the system (we'll filter to those in the department)
-    const allInstructors = await ctx.db.query("users").collect();
-    const departmentInstructors = allInstructors.filter(
-      (user) => user.roles.includes("instructor")
-    );
+    // Get all instructors in this department from the instructors table
+    const departmentInstructors = await ctx.db
+      .query("instructors")
+      .withIndex("by_departmentId", (q) => q.eq("departmentId", department._id))
+      .collect();
 
     // Calculate workload for each instructor
     const instructorWorkloads = await Promise.all(
-      departmentInstructors.map(async (instructor) => {
+      departmentInstructors.map(async (instructorRecord) => {
+        const instructor = await ctx.db.get(instructorRecord.userId);
+        if (!instructor || !instructor.roles.includes("instructor")) {
+          return null;
+        }
+
         // Count sections assigned to this instructor in the department
         const assignedSections = sections.filter(
           (section) => section.instructorId === instructor._id
@@ -464,15 +543,20 @@ export const getInstructorWorkload = query({
       })
     );
 
+    // Filter out null values
+    const validWorkloads = instructorWorkloads.filter(
+      (workload): workload is NonNullable<typeof workload> => workload !== null
+    );
+
     // Sort by load (ascending) then by name
-    instructorWorkloads.sort((a, b) => {
+    validWorkloads.sort((a, b) => {
       if (a.load !== b.load) {
         return a.load - b.load;
       }
       return a.name.localeCompare(b.name);
     });
 
-    return instructorWorkloads;
+    return validWorkloads;
   },
 });
 
@@ -514,17 +598,55 @@ export const getDepartmentInstructors = query({
       throw new Error("Department not found for this user");
     }
 
-    // Get all instructors in the system
-    const allInstructors = await ctx.db.query("users").collect();
-    const instructors = allInstructors.filter((user) =>
-      user.roles.includes("instructor")
+    // Get all instructors in this department from the instructors table
+    const departmentInstructors = await ctx.db
+      .query("instructors")
+      .withIndex("by_departmentId", (q) => q.eq("departmentId", department._id))
+      .collect();
+
+    // Also get instructors from Institute of Humanities department
+    const humanitiesDepartment = await ctx.db
+      .query("departments")
+      .withIndex("by_name", (q) => q.eq("name", "Institute of Humanities"))
+      .first();
+
+    let humanitiesInstructors: typeof departmentInstructors = [];
+    if (humanitiesDepartment) {
+      humanitiesInstructors = await ctx.db
+        .query("instructors")
+        .withIndex("by_departmentId", (q) => q.eq("departmentId", humanitiesDepartment._id))
+        .collect();
+    }
+
+    // Combine instructors from both departments and deduplicate by userId
+    const allInstructorRecords = [...departmentInstructors, ...humanitiesInstructors];
+    const uniqueInstructorIds = new Set<Id<"users">>();
+    const uniqueInstructorRecords = allInstructorRecords.filter((instructor) => {
+      if (uniqueInstructorIds.has(instructor.userId)) {
+        return false;
+      }
+      uniqueInstructorIds.add(instructor.userId);
+      return true;
+    });
+
+    // Get user details for each instructor
+    const instructorsWithDetails = await Promise.all(
+      uniqueInstructorRecords.map(async (instructor) => {
+        const user = await ctx.db.get(instructor.userId);
+        if (!user || !user.roles.includes("instructor")) {
+          return null;
+        }
+        return {
+          _id: user._id,
+          name: `${user.profile.firstName} ${user.profile.lastName}`,
+          email: user.email,
+        };
+      })
     );
 
-    return instructors.map((instructor) => ({
-      _id: instructor._id,
-      name: `${instructor.profile.firstName} ${instructor.profile.lastName}`,
-      email: instructor.email,
-    }));
+    return instructorsWithDetails.filter(
+      (instructor): instructor is NonNullable<typeof instructor> => instructor !== null
+    );
   },
 });
 
@@ -598,6 +720,39 @@ export const assignInstructor = mutation({
       throw new ValidationError(
         "instructorId",
         "User must have instructor role"
+      );
+    }
+
+    // Validate that the instructor belongs to this department OR Institute of Humanities
+    const instructorRecord = await ctx.db
+      .query("instructors")
+      .withIndex("by_userId", (q) => q.eq("userId", args.instructorId))
+      .first();
+
+    if (!instructorRecord) {
+      throw new ValidationError(
+        "instructorId",
+        "Instructor record not found"
+      );
+    }
+
+    // Check if instructor belongs to department head's department
+    const belongsToDepartment = instructorRecord.departmentId === department._id;
+
+    // Also check if instructor belongs to Institute of Humanities
+    const humanitiesDepartment = await ctx.db
+      .query("departments")
+      .withIndex("by_name", (q) => q.eq("name", "Institute of Humanities"))
+      .first();
+
+    const belongsToHumanities = humanitiesDepartment 
+      ? instructorRecord.departmentId === humanitiesDepartment._id
+      : false;
+
+    if (!belongsToDepartment && !belongsToHumanities) {
+      throw new ValidationError(
+        "instructorId",
+        "Instructor must belong to your department or Institute of Humanities"
       );
     }
 

@@ -134,12 +134,8 @@ export default function SectionsPage() {
               </Button>
             </div>
           </ComponentCard>
-
-          {/* Instructor Workload */}
-          <InstructorWorkload sessionToken={sessionToken} />
-
-          {/* Sections Table */}
-          <ComponentCard title="Sections" desc="Manage course sections for your department">
+                    {/* Sections Table */}
+                    <ComponentCard title="Sections" desc="Manage course sections for your department">
             <SectionsTable 
               sections={sections} 
               isLoading={isLoading}
@@ -147,6 +143,9 @@ export default function SectionsPage() {
               selectedTermId={selectedTermId}
             />
           </ComponentCard>
+
+          {/* Instructor Workload */}
+          <InstructorWorkload sessionToken={sessionToken} />
         </div>
 
         {/* Create Section Modal */}

@@ -6,8 +6,6 @@ import { api } from '@/lib/convex';
 import { Id } from '@/lib/convex';
 import ComponentCard from '@/components/common/ComponentCard';
 import Loading from '@/components/loading/Loading';
-import Select from '@/components/form/Select';
-import Label from '@/components/form/Label';
 import { UserIcon } from '@/icons';
 
 type InstructorWorkload = {
@@ -58,37 +56,6 @@ export default function InstructorWorkload({ sessionToken }: InstructorWorkloadP
 
   return (
     <ComponentCard title="Instructor Workload" desc="View instructor assignments and workload distribution">
-      <div className="mb-4">
-        <Label htmlFor="termFilter">Filter by Term:</Label>
-        <div className="relative mt-2 w-full sm:w-64">
-          <Select
-            options={termOptions}
-            placeholder="Select a term"
-            onChange={(e) =>
-              setSelectedTermId(
-                e.target.value ? (e.target.value as Id<'terms'>) : undefined
-              )
-            }
-            defaultValue={selectedTermId || ''}
-          />
-          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </span>
-        </div>
-      </div>
-
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loading />

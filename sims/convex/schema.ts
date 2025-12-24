@@ -173,6 +173,18 @@ export default defineSchema({
     .index("by_status", ["status"]),
 
   /**
+   * Instructors Collection
+   * Represents instructor-specific information linked to users
+   * Foreign Keys: userId → users._id, departmentId → departments._id
+   */
+  instructors: defineTable({
+    userId: v.id("users"),
+    departmentId: v.id("departments"),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_departmentId", ["departmentId"]),
+
+  /**
    * Enrollments Collection (AGGREGATE ROOT: EnrollmentAggregate)
    * Represents student enrollments in course sections
    * Uses AcademicPeriod value object to contextualize the enrollment

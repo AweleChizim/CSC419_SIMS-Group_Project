@@ -122,9 +122,6 @@ export default function SectionsTable({
               Course Title
             </TableCell>
             <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
-              Section ID
-            </TableCell>
-            <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
               Instructor
             </TableCell>
             <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
@@ -162,9 +159,6 @@ export default function SectionsTable({
                 </TableCell>
                 <TableCell className="px-5 py-3 text-start">
                   {section.courseTitle}
-                </TableCell>
-                <TableCell className="px-5 py-3 text-start text-sm text-gray-600 dark:text-gray-400">
-                  {section.sectionId.slice(-8)}
                 </TableCell>
                 <TableCell className="px-5 py-3 text-start">
                   <div className="relative w-full min-w-[180px]">
