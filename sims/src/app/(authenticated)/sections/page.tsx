@@ -35,6 +35,14 @@ type Term = {
   _id: Id<'terms'>;
   name: string;
   sessionId: Id<'academicSessions'>;
+  sessionYearLabel: string;
+  startDate: number;
+  endDate: number;
+};
+
+type AcademicSession = {
+  _id: Id<'academicSessions'>;
+  yearLabel: string;
   startDate: number;
   endDate: number;
 };
@@ -48,9 +56,19 @@ export default function SectionsPage() {
     return null;
   });
 
+  const [selectedSessionId, setSelectedSessionId] = useState<Id<'academicSessions'> | undefined>(undefined);
   const [selectedTermId, setSelectedTermId] = useState<Id<'terms'> | undefined>(undefined);
   const createModal = useModal();
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
+  // Fetch academic sessions
+  const academicSessions = useQuery(api.academicSessions.listSessions) as AcademicSession[] | undefined;
+
+  // Fetch terms - filter by selected session if provided
+  const allTerms = useQuery(api.department.getTerms) as Term[] | undefined;
+  const terms = selectedSessionId
+    ? allTerms?.filter((term) => term.sessionId === selectedSessionId)
+    : allTerms;
 
   // Fetch sections
   const sections = useQuery(
@@ -63,10 +81,7 @@ export default function SectionsPage() {
       : 'skip'
   ) as Section[] | undefined;
 
-  // Fetch terms for filter
-  const terms = useQuery(api.department.getTerms) as Term[] | undefined;
-
-  const isLoading = sections === undefined || terms === undefined;
+  const isLoading = sections === undefined || terms === undefined || academicSessions === undefined;
 
   const handleSuccess = () => {
     setShowSuccessMessage(true);
@@ -74,11 +89,26 @@ export default function SectionsPage() {
     createModal.closeModal();
   };
 
+  const handleSessionChange = (sessionId: string) => {
+    const newSessionId = sessionId ? (sessionId as Id<'academicSessions'>) : undefined;
+    setSelectedSessionId(newSessionId);
+    // Reset term selection when session changes
+    setSelectedTermId(undefined);
+  };
+
+  const sessionOptions = [
+    { value: '', label: 'All Sessions' },
+    ...(academicSessions?.map((session) => ({
+      value: session._id,
+      label: session.yearLabel,
+    })) || []),
+  ];
+
   const termOptions = [
-    { value: '', label: 'All Terms' },
+    { value: '', label: selectedSessionId ? 'All Terms' : 'Select Session First' },
     ...(terms?.map((term) => ({
       value: term._id,
-      label: term.name,
+      label: `${term.name} (${term.sessionYearLabel})`,
     })) || []),
   ];
 
@@ -95,34 +125,33 @@ export default function SectionsPage() {
           {/* Filters and Create Button */}
           <ComponentCard title="Filters">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <Label htmlFor="termFilter">Filter by Term:</Label>
-                <div className="relative w-full sm:w-64">
-                  <Select
-                    options={termOptions}
-                    placeholder="Select a term"
-                    onChange={(e) =>
-                      setSelectedTermId(
-                        e.target.value ? (e.target.value as Id<'terms'>) : undefined
-                      )
-                    }
-                    defaultValue={selectedTermId || ''}
-                  />
-                  <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </span>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="sessionFilter">Session:</Label>
+                  <div className="relative w-full sm:w-48">
+                    <Select
+                      options={sessionOptions}
+                      placeholder="Select a session"
+                      onChange={(e) => handleSessionChange(e.target.value)}
+                      defaultValue={selectedSessionId || ''}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="termFilter">Term:</Label>
+                  <div className="relative w-full sm:w-48">
+                    <Select
+                      options={termOptions}
+                      placeholder={selectedSessionId ? "Select a term" : "Select session first"}
+                      onChange={(e) =>
+                        setSelectedTermId(
+                          e.target.value ? (e.target.value as Id<'terms'>) : undefined
+                        )
+                      }
+                      defaultValue={selectedTermId || ''}
+                      disabled={!selectedSessionId}
+                    />
+                  </div>
                 </div>
               </div>
               <Button

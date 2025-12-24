@@ -376,22 +376,31 @@ export const createSection = mutation({
 
 /**
  * Get all terms for dropdown selection
+ * Includes session information for better filtering
  */
 export const getTerms = query({
   args: {},
   handler: async (ctx) => {
     const terms = await ctx.db.query("terms").collect();
     
+    // Get all sessions for lookup
+    const sessions = await ctx.db.query("academicSessions").collect();
+    const sessionMap = new Map(sessions.map((s) => [s._id, s]));
+    
     // Sort by start date descending (most recent first)
     const sortedTerms = terms.sort((a, b) => b.startDate - a.startDate);
     
-    return sortedTerms.map((term) => ({
-      _id: term._id,
-      name: term.name,
-      sessionId: term.sessionId,
-      startDate: term.startDate,
-      endDate: term.endDate,
-    }));
+    return sortedTerms.map((term) => {
+      const session = sessionMap.get(term.sessionId);
+      return {
+        _id: term._id,
+        name: term.name,
+        sessionId: term.sessionId,
+        sessionYearLabel: session?.yearLabel || "Unknown",
+        startDate: term.startDate,
+        endDate: term.endDate,
+      };
+    });
   },
 });
 
