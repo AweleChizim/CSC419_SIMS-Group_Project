@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/convex";
+import { Id } from "@/lib/convex";
 import PageBreadCrumb from "@/components/common/PageBreadCrumb";
 import MetricCard from "@/components/common/MetricCard";
 import ComponentCard from "@/components/common/ComponentCard";
@@ -11,6 +12,8 @@ import Badge from "@/components/ui/badge/Badge";
 import { PieChartIcon, TaskIcon, CheckCircleIcon, CalenderIcon } from "@/icons";
 import Button from "@/components/ui/button/Button";
 import WeeklyCalendarView from "./WeeklyCalendarView";
+import { Modal } from "@/components/ui/modal";
+import Alert from "@/components/ui/alert/Alert";
 
 type ScheduleSlot = {
   day: string;
@@ -54,11 +57,20 @@ export default function StudentDashboardView() {
     return null;
   });
 
+  const [showDropModal, setShowDropModal] = useState(false);
+  const [courseToDrop, setCourseToDrop] = useState<{ enrollmentId: string; courseCode: string; courseTitle: string } | null>(null);
+  const [droppingEnrollmentId, setDroppingEnrollmentId] = useState<string | null>(null);
+  const [dropError, setDropError] = useState<string | null>(null);
+  const [dropSuccess, setDropSuccess] = useState(false);
+
   // Fetch student stats
   const stats = useQuery(
     api.dashboard.getStudentStats,
     sessionToken ? { token: sessionToken } : "skip"
   ) as StudentStats | undefined;
+
+  // @ts-ignore - Convex API path with slashes
+  const dropCourseMutation = useMutation(api["mutations/enrollmentMutations"].dropCourse);
 
   const isLoading = stats === undefined;
 
@@ -107,6 +119,64 @@ export default function StudentDashboardView() {
     }
   };
 
+  const handleDropClick = (course: { enrollmentId: string; courseCode: string; courseTitle: string }) => {
+    setCourseToDrop(course);
+    setShowDropModal(true);
+    setDropError(null);
+  };
+
+  const handleDropConfirm = async () => {
+    if (!courseToDrop || !sessionToken) {
+      setDropError("Authentication required. Please log in.");
+      return;
+    }
+
+    setDroppingEnrollmentId(courseToDrop.enrollmentId);
+    setDropError(null);
+
+    try {
+      await dropCourseMutation({
+        enrollmentId: courseToDrop.enrollmentId as Id<"enrollments">,
+        token: sessionToken,
+      });
+      
+      setDropSuccess(true);
+      setShowDropModal(false);
+      setCourseToDrop(null);
+      setTimeout(() => setDropSuccess(false), 3000);
+    } catch (error) {
+      let errorMessage = "Failed to drop course";
+      
+      if (error instanceof Error) {
+        const fullMessage = error.message;
+        if (fullMessage.includes("Cannot drop enrollment")) {
+          errorMessage = fullMessage.replace(/.*Cannot drop enrollment[^:]*:\s*/, "");
+        } else if (fullMessage.includes("You can only drop your own enrollments")) {
+          errorMessage = "You can only drop your own enrollments.";
+        } else if (fullMessage.includes("Authentication required")) {
+          errorMessage = "Authentication required. Please log in.";
+        } else if (fullMessage.includes("Invalid session token")) {
+          errorMessage = "Your session has expired. Please log in again.";
+        } else {
+          const errorMatch = fullMessage.match(/(?:Uncaught )?Error:\s*(.+?)(?:\s+Called by client)?$/);
+          if (errorMatch && errorMatch[1]) {
+            errorMessage = errorMatch[1].trim();
+          }
+        }
+      }
+      
+      setDropError(errorMessage);
+    } finally {
+      setDroppingEnrollmentId(null);
+    }
+  };
+
+  const handleDropCancel = () => {
+    setShowDropModal(false);
+    setCourseToDrop(null);
+    setDropError(null);
+  };
+
   return (
     <div>
       <PageBreadCrumb pageTitle="Dashboard" />
@@ -129,6 +199,12 @@ export default function StudentDashboardView() {
         </div>
       ) : stats ? (
         <div className="space-y-6">
+          {dropSuccess && (
+            <Alert variant="success" title="Success" message="Course dropped successfully!" />
+          )}
+          {dropError && (
+            <Alert variant="error" title="Error" message={dropError} />
+          )}
           {/* Welcome Header */}
           <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
             <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
@@ -233,6 +309,9 @@ export default function StudentDashboardView() {
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
                         Instructor
                       </th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Action
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -269,6 +348,18 @@ export default function StudentDashboardView() {
                         <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
                           {course.instructor}
                         </td>
+                        <td className="px-4 py-4">
+                          {(course.enrollmentStatus === "active" || course.enrollmentStatus === "enrolled") && (
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={() => handleDropClick(course)}
+                              disabled={droppingEnrollmentId === course.enrollmentId}
+                            >
+                              {droppingEnrollmentId === course.enrollmentId ? "Dropping..." : "Drop"}
+                            </Button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -276,6 +367,52 @@ export default function StudentDashboardView() {
               </div>
             )}
           </ComponentCard>
+
+          {/* Drop Confirmation Modal */}
+          <Modal
+            isOpen={showDropModal}
+            onClose={handleDropCancel}
+            className="max-w-[500px] p-6"
+          >
+            <div>
+              <h4 className="text-title-sm mb-4 font-semibold text-gray-800 dark:text-white/90">
+                Drop Course
+              </h4>
+              <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+                Are you sure you want to drop this course?
+              </p>
+              {courseToDrop && (
+                <div className="mt-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+                  <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                    {courseToDrop.courseCode} - {courseToDrop.courseTitle}
+                  </p>
+                </div>
+              )}
+              {dropError && (
+                <div className="mt-4 rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                  <p className="text-sm text-red-600 dark:text-red-400">{dropError}</p>
+                </div>
+              )}
+              <div className="mt-6 flex w-full items-center justify-end gap-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleDropCancel}
+                  disabled={droppingEnrollmentId !== null}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  onClick={handleDropConfirm}
+                  disabled={droppingEnrollmentId !== null}
+                >
+                  {droppingEnrollmentId ? "Dropping..." : "Drop Course"}
+                </Button>
+              </div>
+            </div>
+          </Modal>
         </div>
       ) : (
         <div className="py-12 text-center text-gray-500 dark:text-gray-400">

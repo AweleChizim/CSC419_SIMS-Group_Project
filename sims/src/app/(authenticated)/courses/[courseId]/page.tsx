@@ -12,6 +12,7 @@ import Loading from '@/components/loading/Loading';
 import Button from '@/components/ui/button/Button';
 import Badge from '@/components/ui/badge/Badge';
 import Alert from '@/components/ui/alert/Alert';
+import { Modal } from '@/components/ui/modal';
 
 type CourseDetails = {
   title: string;
@@ -41,6 +42,8 @@ export default function CourseDetailPage() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
   const [enrollingSectionId, setEnrollingSectionId] = useState<string | null>(null);
+  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
+  const [waitlistSectionId, setWaitlistSectionId] = useState<string | null>(null);
 
   // Fetch course details
   const courseDetails = useQuery(
@@ -53,7 +56,7 @@ export default function CourseDetailPage() {
 
   const isLoading = courseDetails === undefined;
 
-  const handleEnroll = async (sectionId: string) => {
+  const handleEnroll = async (sectionId: string, joinWaitlist: boolean = false) => {
     if (!sessionToken) {
       setEnrollmentError('Authentication required. Please log in.');
       return;
@@ -61,14 +64,23 @@ export default function CourseDetailPage() {
 
     setEnrollingSectionId(sectionId);
     setEnrollmentError(null);
+    setShowWaitlistModal(false);
+    setWaitlistSectionId(null);
 
     try {
-      await enrollMutation({
+      const result = await enrollMutation({
         sectionId: sectionId as Id<'sections'>,
         token: sessionToken,
+        joinWaitlist: joinWaitlist,
       });
-      setShowSuccessMessage(true);
-      setTimeout(() => setShowSuccessMessage(false), 3000);
+      
+      if (result.status === 'waitlisted') {
+        setShowSuccessMessage(true);
+        setTimeout(() => setShowSuccessMessage(false), 3000);
+      } else {
+        setShowSuccessMessage(true);
+        setTimeout(() => setShowSuccessMessage(false), 3000);
+      }
     } catch (error) {
       let errorMessage = 'Failed to enroll in section';
       
@@ -80,7 +92,11 @@ export default function CourseDetailPage() {
         if (fullMessage.includes('You have already enrolled for this course')) {
           errorMessage = 'You have already enrolled for this course.';
         } else if (fullMessage.includes('Section Full')) {
-          errorMessage = 'This section is full.';
+          // If section is full, show waitlist modal
+          setWaitlistSectionId(sectionId);
+          setShowWaitlistModal(true);
+          setEnrollingSectionId(null);
+          return;
         } else if (fullMessage.includes('Missing prerequisites')) {
           errorMessage = fullMessage.replace(/.*Missing prerequisites:\s*/, 'Missing prerequisites: ');
         } else if (fullMessage.includes('Schedule conflicts') || fullMessage.includes('Schedule conflict')) {
@@ -123,6 +139,12 @@ export default function CourseDetailPage() {
       setTimeout(() => setEnrollmentError(null), 5000);
     } finally {
       setEnrollingSectionId(null);
+    }
+  };
+
+  const handleWaitlistConfirm = () => {
+    if (waitlistSectionId) {
+      handleEnroll(waitlistSectionId, true);
     }
   };
 
@@ -243,11 +265,22 @@ export default function CourseDetailPage() {
                       <TableCell className="px-5 py-3 text-start">
                         <Button
                           size="sm"
-                          variant="primary"
-                          disabled={section.seatsAvailable <= 0 || enrollingSectionId === section.sectionId}
-                          onClick={() => handleEnroll(section.sectionId)}
+                          variant={section.seatsAvailable <= 0 ? "warning" : "primary"}
+                          disabled={enrollingSectionId === section.sectionId}
+                          onClick={() => {
+                            if (section.seatsAvailable <= 0) {
+                              setWaitlistSectionId(section.sectionId);
+                              setShowWaitlistModal(true);
+                            } else {
+                              handleEnroll(section.sectionId);
+                            }
+                          }}
                         >
-                          {enrollingSectionId === section.sectionId ? 'Enrolling...' : 'Enroll'}
+                          {enrollingSectionId === section.sectionId 
+                            ? 'Enrolling...' 
+                            : section.seatsAvailable <= 0 
+                            ? 'Join Waitlist' 
+                            : 'Enroll'}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -262,6 +295,45 @@ export default function CourseDetailPage() {
             </div>
           )}
         </ComponentCard>
+
+        {/* Waitlist Confirmation Modal */}
+        <Modal
+          isOpen={showWaitlistModal}
+          onClose={() => {
+            setShowWaitlistModal(false);
+            setWaitlistSectionId(null);
+          }}
+          className="max-w-[500px] p-6"
+        >
+          <div>
+            <h4 className="text-title-sm mb-4 font-semibold text-gray-800 dark:text-white/90">
+              Join Waitlist?
+            </h4>
+            <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+              This section is full. Would you like to join the waitlist? You will be automatically enrolled if a spot becomes available.
+            </p>
+            <div className="mt-6 flex w-full items-center justify-end gap-3">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowWaitlistModal(false);
+                  setWaitlistSectionId(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="warning"
+                onClick={handleWaitlistConfirm}
+                disabled={enrollingSectionId !== null}
+              >
+                {enrollingSectionId ? 'Joining...' : 'Join Waitlist'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   );
