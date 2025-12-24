@@ -83,8 +83,22 @@ export default function CourseDetailPage() {
           errorMessage = 'This section is full.';
         } else if (fullMessage.includes('Missing prerequisites')) {
           errorMessage = fullMessage.replace(/.*Missing prerequisites:\s*/, 'Missing prerequisites: ');
-        } else if (fullMessage.includes('Schedule conflicts')) {
-          errorMessage = fullMessage.replace(/.*Schedule conflicts with:\s*/, 'Schedule conflict: ');
+        } else if (fullMessage.includes('Schedule conflicts') || fullMessage.includes('Schedule conflict')) {
+          // Extract the conflict details and format them nicely
+          const conflictMatch = fullMessage.match(/Schedule conflicts? with:\s*(.+?)(?:\s+Called by client)?$/i);
+          if (conflictMatch && conflictMatch[1]) {
+            const conflicts = conflictMatch[1].split(',').map(c => c.trim());
+            if (conflicts.length === 1) {
+              // Single conflict - format nicely
+              // Format: "COS 409 on Mon 09:00-12:00"
+              errorMessage = `Schedule conflict: This section conflicts with ${conflicts[0]}.`;
+            } else {
+              // Multiple conflicts
+              errorMessage = `Schedule conflict: This section conflicts with your existing enrollments: ${conflicts.join(', ')}.`;
+            }
+          } else {
+            errorMessage = 'Schedule conflict: This section conflicts with one of your existing enrollments.';
+          }
         } else if (fullMessage.includes('Enrollment deadline has passed')) {
           errorMessage = fullMessage.replace(/.*Enrollment deadline has passed[^:]*:\s*/, 'Enrollment deadline has passed. ');
         } else if (fullMessage.includes('Authentication required')) {

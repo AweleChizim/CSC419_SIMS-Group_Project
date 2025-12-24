@@ -10,6 +10,14 @@ import ComponentCard from "@/components/common/ComponentCard";
 import Badge from "@/components/ui/badge/Badge";
 import { PieChartIcon, TaskIcon, CheckCircleIcon, CalenderIcon } from "@/icons";
 import Button from "@/components/ui/button/Button";
+import WeeklyCalendarView from "./WeeklyCalendarView";
+
+type ScheduleSlot = {
+  day: string;
+  startTime: string;
+  endTime: string;
+  room: string;
+};
 
 type StudentStats = {
   studentProfile: {
@@ -25,9 +33,12 @@ type StudentStats = {
     totalCredits: number;
   };
   currentSchedule: Array<{
+    enrollmentId: string;
+    enrollmentStatus: string;
     courseCode: string;
     courseTitle: string;
     schedule: string;
+    scheduleSlots: ScheduleSlot[];
     room: string;
     instructor: string;
   }>;
@@ -67,6 +78,32 @@ export default function StudentDashboardView() {
         return "primary";
       default:
         return "info";
+    }
+  };
+
+  // Get enrollment status badge color
+  const getEnrollmentStatusColor = (status: string): "success" | "warning" | "info" => {
+    switch (status.toLowerCase()) {
+      case "enrolled":
+      case "active":
+        return "success";
+      case "waitlisted":
+        return "warning";
+      default:
+        return "info";
+    }
+  };
+
+  // Normalize enrollment status for display
+  const normalizeEnrollmentStatus = (status: string): string => {
+    switch (status.toLowerCase()) {
+      case "active":
+      case "enrolled":
+        return "Enrolled";
+      case "waitlisted":
+        return "Waitlisted";
+      default:
+        return status;
     }
   };
 
@@ -144,6 +181,16 @@ export default function StudentDashboardView() {
             </div>
           </div>
 
+          {/* Weekly Schedule Calendar */}
+          {stats.currentSchedule.length > 0 && (
+            <ComponentCard
+              title="Weekly Schedule"
+              desc="Visual view of your class schedule"
+            >
+              <WeeklyCalendarView courses={stats.currentSchedule} />
+            </ComponentCard>
+          )}
+
           {/* Current Schedule */}
           <ComponentCard
             title="My Classes"
@@ -175,6 +222,9 @@ export default function StudentDashboardView() {
                         Course
                       </th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
                         Schedule
                       </th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -188,7 +238,7 @@ export default function StudentDashboardView() {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {stats.currentSchedule.map((course, index) => (
                       <tr
-                        key={index}
+                        key={course.enrollmentId || index}
                         className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
                       >
                         <td className="px-4 py-4">
@@ -200,6 +250,15 @@ export default function StudentDashboardView() {
                               {course.courseTitle}
                             </div>
                           </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <Badge
+                            color={getEnrollmentStatusColor(course.enrollmentStatus)}
+                            variant="light"
+                            size="sm"
+                          >
+                            {normalizeEnrollmentStatus(course.enrollmentStatus)}
+                          </Badge>
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
                           {course.schedule}

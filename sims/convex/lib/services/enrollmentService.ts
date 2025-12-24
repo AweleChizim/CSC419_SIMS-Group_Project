@@ -113,35 +113,40 @@ export async function checkScheduleConflicts(
       e._id !== excludeEnrollmentId
   );
 
-  // Check for schedule conflicts
-  const conflicts: string[] = [];
+    // Check for schedule conflicts
+    const conflicts: string[] = [];
 
-  for (const enrollment of activeEnrollments) {
-    const existingSection = await db.get(enrollment.sectionId);
-    if (!existingSection) {
-      continue;
-    }
+    for (const enrollment of activeEnrollments) {
+      const existingSection = await db.get(enrollment.sectionId);
+      if (!existingSection) {
+        continue;
+      }
 
-    // Check if any schedule slots overlap
-    for (const newSlot of newSection.scheduleSlots) {
-      for (const existingSlot of existingSection.scheduleSlots) {
-        if (slotsConflict(newSlot, existingSlot)) {
-          const course = await db.get(existingSection.courseId);
-          conflicts.push(
-            `${course?.code || "Unknown"} (${existingSlot.day} ${existingSlot.startTime}-${existingSlot.endTime})`
-          );
+      // Check if any schedule slots overlap
+      for (const newSlot of newSection.scheduleSlots) {
+        for (const existingSlot of existingSection.scheduleSlots) {
+          if (slotsConflict(newSlot, existingSlot)) {
+            const course = await db.get(existingSection.courseId);
+            const conflictTime = `${existingSlot.day} ${existingSlot.startTime}-${existingSlot.endTime}`;
+            conflicts.push(
+              `${course?.code || "Unknown"} on ${conflictTime}`
+            );
+            break; // Only add one conflict per existing section
+          }
         }
       }
     }
-  }
 
-  if (conflicts.length > 0) {
-    throw new InvariantViolationError(
-      "EnrollmentService",
-      "Schedule Conflict Check",
-      `Schedule conflicts with: ${conflicts.join(", ")}`
-    );
-  }
+    if (conflicts.length > 0) {
+      const conflictMessage = conflicts.length === 1
+        ? conflicts[0]
+        : conflicts.join(", ");
+      throw new InvariantViolationError(
+        "EnrollmentService",
+        "Schedule Conflict Check",
+        `Schedule conflicts with: ${conflictMessage}`
+      );
+    }
 }
 
 /**
