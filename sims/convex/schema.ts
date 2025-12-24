@@ -356,5 +356,20 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_userId", ["userId"])
     .index("by_expiresAt", ["expiresAt"]),
+
+  /**
+   * Notifications Collection
+   * Represents user notifications
+   * Foreign Keys: userId → users._id
+   */
+  notifications: defineTable({
+    userId: v.id("users"),
+    message: v.string(),
+    read: v.boolean(),
+    createdAt: v.number(), // Unix timestamp
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_read", ["userId", "read"])
+    .index("by_createdAt", ["createdAt"]),
 });
 

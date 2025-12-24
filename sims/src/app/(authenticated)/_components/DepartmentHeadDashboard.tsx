@@ -6,6 +6,7 @@ import { api } from "@/lib/convex";
 import { Id } from "@/lib/convex";
 import PageBreadCrumb from "@/components/common/PageBreadCrumb";
 import MetricCard from "@/components/common/MetricCard";
+import ComponentCard from "@/components/common/ComponentCard";
 import { UserIcon, GroupIcon, FileIcon } from "@/icons";
 
 type DashboardStats = {
@@ -75,6 +76,13 @@ export default function DepartmentHeadDashboard() {
     // The query will automatically refetch
   };
 
+  // Calculate assignment progress percentage
+  const assignmentProgress = stats
+    ? stats.activeSections + stats.unassignedSections > 0
+      ? Math.round((stats.activeSections / (stats.activeSections + stats.unassignedSections)) * 100)
+      : 0
+    : 0;
+
   return (
     <div>
       <PageBreadCrumb pageTitle="Department Dashboard" />
@@ -108,14 +116,34 @@ export default function DepartmentHeadDashboard() {
               icon={<FileIcon className="h-6 w-6 text-brand-500" />}
               description="Sections with assigned instructors"
             />
-            <MetricCard
-              title="Unassigned Sections"
-              value={stats.unassignedSections}
-              icon={<GroupIcon className="h-6 w-6 text-brand-500" />}
-              description="Sections needing instructor assignment"
-            />
-          </div>
+          <MetricCard
+            title="Unassigned Sections"
+            value={stats.unassignedSections}
+            icon={<GroupIcon className="h-6 w-6 text-brand-500" />}
+            description="Sections needing instructor assignment"
+          />
         </div>
+
+        {/* Assignment Progress Bar */}
+        <ComponentCard title="Assignment Progress" desc="Track section assignment completion">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Sections Assigned: {assignmentProgress}%
+              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {stats.activeSections} / {stats.activeSections + stats.unassignedSections}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+              <div
+                className="bg-brand-500 h-2.5 rounded-full transition-all duration-300"
+                style={{ width: `${assignmentProgress}%` }}
+              />
+            </div>
+          </div>
+        </ComponentCard>
+      </div>
       ) : (
         <div className="py-12 text-center text-gray-500 dark:text-gray-400">
           <p className="text-lg font-medium mb-2">Unable to load dashboard</p>

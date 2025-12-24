@@ -11,7 +11,7 @@ import Alert from '@/components/ui/alert/Alert';
 import Select from '@/components/form/Select';
 import Label from '@/components/form/Label';
 import { useModal } from '@/hooks/useModal';
-import { PlusIcon } from '@/icons';
+import { PlusIcon, DownloadIcon } from '@/icons';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import SectionsTable from './_components/SectionsTable';
 import CreateSectionModal from './_components/CreateSectionModal';
@@ -30,6 +30,7 @@ type Section = {
   status: string;
   termId: Id<'terms'>;
   termName: string;
+  sessionYearLabel: string;
   isOpenForEnrollment: boolean;
 };
 
@@ -63,11 +64,26 @@ export default function SectionsPage() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [publishMessage, setPublishMessage] = useState<string | null>(null);
   const [publishErrorMessage, setPublishErrorMessage] = useState<string | null>(null);
+  const [assignmentToastMessage, setAssignmentToastMessage] = useState<string | null>(null);
 
   const publishSections = useMutation(api.department.publishSections);
 
   // Fetch current or next active term
   const currentOrNextTerm = useQuery(api.department.getCurrentOrNextTerm) as Term | null | undefined;
+
+  // Fetch assignment report for CSV export
+  const effectiveTermId = selectedTermId || currentOrNextTerm?._id;
+  const assignmentReport = useQuery(
+    api.department.getAssignmentReport,
+    sessionToken && effectiveTermId
+      ? {
+          token: sessionToken,
+          termId: effectiveTermId,
+        }
+      : sessionToken
+      ? { token: sessionToken }
+      : 'skip'
+  ) as Array<{ Term: string; Session: string; Course: string; InstructorName: string; Capacity: number }> | undefined;
 
   // Fetch terms
   const terms = useQuery(api.department.getTerms) as Term[] | undefined;
@@ -80,7 +96,6 @@ export default function SectionsPage() {
   }, [currentOrNextTerm, selectedTermId]);
 
   // Fetch sections - use selectedTermId or currentOrNextTerm
-  const effectiveTermId = selectedTermId || currentOrNextTerm?._id;
   const sections = useQuery(
     api.department.getSections,
     sessionToken && effectiveTermId
@@ -131,6 +146,51 @@ export default function SectionsPage() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (!assignmentReport || assignmentReport.length === 0) {
+      setPublishErrorMessage('No data available to export');
+      setTimeout(() => setPublishErrorMessage(null), 3000);
+      return;
+    }
+
+    // Create CSV content
+    const headers = ['Term', 'Session', 'Course', 'InstructorName', 'Capacity'];
+    const csvRows = [
+      headers.join(','),
+      ...assignmentReport.map((row) =>
+        [
+          `"${row.Term}"`,
+          `"${row.Session}"`,
+          `"${row.Course}"`,
+          `"${row.InstructorName}"`,
+          row.Capacity.toString(),
+        ].join(',')
+      ),
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `assignment-report-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleAssignmentChange = () => {
+    setAssignmentToastMessage('Assignment saved successfully');
+    setTimeout(() => setAssignmentToastMessage(null), 3000);
+  };
+
+  const handleSectionDeleted = () => {
+    setAssignmentToastMessage('Section deleted successfully');
+    setTimeout(() => setAssignmentToastMessage(null), 3000);
+  };
+
   const termOptions = [
     { value: '', label: 'All Terms' },
     ...(terms?.map((term) => ({
@@ -153,6 +213,9 @@ export default function SectionsPage() {
           )}
           {publishErrorMessage && (
             <Alert variant="error" title="Error" message={publishErrorMessage} />
+          )}
+          {assignmentToastMessage && (
+            <Alert variant="success" title="Success" message={assignmentToastMessage} />
           )}
 
           {/* Term Planner */}
@@ -193,7 +256,16 @@ export default function SectionsPage() {
           </ComponentCard>
           {/* Sections Table */}
           <ComponentCard title="Sections" desc="Manage course sections for your department">
-            <div className="mb-4 flex justify-end">
+            <div className="mb-4 flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                startIcon={<DownloadIcon className="h-4 w-4" />}
+                onClick={handleExportCSV}
+                disabled={!sessionToken || !assignmentReport || assignmentReport.length === 0}
+              >
+                Export CSV
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
@@ -208,6 +280,8 @@ export default function SectionsPage() {
               isLoading={isLoading}
               sessionToken={sessionToken}
               selectedTermId={effectiveTermId}
+              onAssignmentChange={handleAssignmentChange}
+              onSectionDeleted={handleSectionDeleted}
             />
           </ComponentCard>
 

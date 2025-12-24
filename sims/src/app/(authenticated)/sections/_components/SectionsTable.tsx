@@ -7,7 +7,9 @@ import { Id } from '@/lib/convex';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import Loading from '@/components/loading/Loading';
 import Select from '@/components/form/Select';
-import { FileIcon, AlertIcon } from '@/icons';
+import { Modal } from '@/components/ui/modal';
+import Button from '@/components/ui/button/Button';
+import { FileIcon, AlertIcon, TrashBinIcon } from '@/icons';
 
 type Section = {
   _id: Id<'sections'>;
@@ -21,6 +23,7 @@ type Section = {
   status: string;
   termId: Id<'terms'>;
   termName: string;
+  sessionYearLabel: string;
   isOpenForEnrollment: boolean;
 };
 
@@ -35,15 +38,22 @@ interface SectionsTableProps {
   isLoading: boolean;
   sessionToken: string | null;
   selectedTermId: Id<'terms'> | undefined;
+  onAssignmentChange?: () => void;
+  onSectionDeleted?: () => void;
 }
 
 export default function SectionsTable({ 
   sections, 
   isLoading, 
   sessionToken,
-  selectedTermId 
+  selectedTermId,
+  onAssignmentChange,
+  onSectionDeleted
 }: SectionsTableProps) {
   const [assigningSectionId, setAssigningSectionId] = useState<Id<'sections'> | null>(null);
+  const [deletingSectionId, setDeletingSectionId] = useState<Id<'sections'> | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [sectionToDelete, setSectionToDelete] = useState<Section | null>(null);
 
   // Fetch department instructors
   const instructors = useQuery(
@@ -53,6 +63,7 @@ export default function SectionsTable({
 
   const assignInstructor = useMutation(api.department.assignInstructor);
   const removeInstructor = useMutation(api.department.removeInstructor);
+  const deleteSection = useMutation(api.department.deleteSection);
 
   const handleInstructorChange = async (
     sectionId: Id<'sections'>,
@@ -77,12 +88,48 @@ export default function SectionsTable({
           instructorId: instructorId as Id<'users'>,
         });
       }
+      // Notify parent component of successful assignment change
+      if (onAssignmentChange) {
+        onAssignmentChange();
+      }
     } catch (error) {
       console.error('Failed to assign instructor:', error);
-      // You could add toast notification here
     } finally {
       setAssigningSectionId(null);
     }
+  };
+
+  const handleDeleteClick = (section: Section) => {
+    setSectionToDelete(section);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!sessionToken || !sectionToDelete) return;
+
+    setDeletingSectionId(sectionToDelete._id);
+
+    try {
+      await deleteSection({
+        token: sessionToken,
+        sectionId: sectionToDelete._id,
+      });
+      setDeleteConfirmOpen(false);
+      setSectionToDelete(null);
+      if (onSectionDeleted) {
+        onSectionDeleted();
+      }
+    } catch (error: any) {
+      console.error('Failed to delete section:', error);
+      alert(error.message || 'Failed to delete section');
+    } finally {
+      setDeletingSectionId(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false);
+    setSectionToDelete(null);
   };
 
   if (isLoading) {
@@ -135,7 +182,10 @@ export default function SectionsTable({
               Publication Status
             </TableCell>
             <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
-              Term
+              Term / Session
+            </TableCell>
+            <TableCell isHeader className="px-5 py-3 text-start font-medium text-gray-500 dark:text-gray-400">
+              Actions
             </TableCell>
           </TableRow>
         </TableHeader>
@@ -216,13 +266,74 @@ export default function SectionsTable({
                   </span>
                 </TableCell>
                 <TableCell className="px-5 py-3 text-start text-sm text-gray-600 dark:text-gray-400">
-                  {section.termName}
+                  {section.termName} / {section.sessionYearLabel}
+                </TableCell>
+                <TableCell className="px-5 py-3 text-start">
+                  <button
+                    onClick={() => handleDeleteClick(section)}
+                    disabled={deletingSectionId === section._id || !sessionToken}
+                    className="flex items-center justify-center rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed dark:text-red-400 dark:hover:bg-red-900/20"
+                    title="Delete section"
+                  >
+                    <TrashBinIcon className="h-5 w-5" />
+                  </button>
                 </TableCell>
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteConfirmOpen}
+        onClose={handleDeleteCancel}
+        className="max-w-[500px] p-6"
+      >
+        <div>
+          <h4 className="text-title-sm mb-4 font-semibold text-gray-800 dark:text-white/90">
+            Delete Section
+          </h4>
+          <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+            Are you sure you want to delete this section?
+          </p>
+          {sectionToDelete && (
+            <div className="mt-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                {sectionToDelete.courseCode} - {sectionToDelete.courseTitle}
+              </p>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                {sectionToDelete.termName} / {sectionToDelete.sessionYearLabel}
+              </p>
+              {sectionToDelete.enrollmentCount > 0 && (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                  Warning: This section has {sectionToDelete.enrollmentCount} enrollment(s). 
+                  You cannot delete sections with enrollments.
+                </p>
+              )}
+            </div>
+          )}
+          <div className="mt-6 flex w-full items-center justify-end gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDeleteCancel}
+              disabled={deletingSectionId !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDeleteConfirm}
+              disabled={deletingSectionId !== null || (sectionToDelete?.enrollmentCount ?? 0) > 0}
+              className="bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {deletingSectionId ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

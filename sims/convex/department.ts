@@ -5,11 +5,12 @@
  * Restricted to users with role === 'department_head'.
  */
 
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { validateSessionToken } from "./lib/session";
 import { NotFoundError, ValidationError } from "./lib/errors";
 import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 /**
  * Get dashboard statistics for department head
@@ -247,6 +248,9 @@ export const getSections = query({
           }
         }
 
+        // Get session information
+        const session = term ? await ctx.db.get(term.sessionId) : null;
+
         return {
           _id: section._id,
           courseCode: course?.code || "Unknown",
@@ -259,6 +263,7 @@ export const getSections = query({
           status: isValidInstructor ? "Active" : "Unassigned",
           termId: section.termId,
           termName: term?.name || "Unknown",
+          sessionYearLabel: session?.yearLabel || "Unknown",
           isOpenForEnrollment: section.isOpenForEnrollment ?? false,
         };
       })
@@ -713,6 +718,92 @@ export const getDepartmentInstructors = query({
 });
 
 /**
+ * Get assignment report for CSV export
+ * Returns a flat list of { Term, Session, Course, InstructorName, Capacity }
+ */
+export const getAssignmentReport = query({
+  args: {
+    token: v.optional(v.string()),
+    termId: v.optional(v.id("terms")),
+  },
+  handler: async (ctx, args) => {
+    // Validate session token and get user
+    if (!args.token) {
+      throw new Error("Authentication required");
+    }
+
+    const userId = await validateSessionToken(ctx.db, args.token);
+    if (!userId) {
+      throw new Error("Invalid session token");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Verify role is department_head
+    if (!user.roles.includes("department_head")) {
+      throw new Error("Access denied: Department head role required");
+    }
+
+    // Find department where this user is the head
+    const department = await ctx.db
+      .query("departments")
+      .withIndex("by_headId", (q) => q.eq("headId", userId))
+      .first();
+
+    if (!department) {
+      throw new Error("Department not found for this user");
+    }
+
+    // Get all courses in this department
+    const departmentCourses = await ctx.db
+      .query("courses")
+      .withIndex("by_departmentId", (q) => q.eq("departmentId", department._id))
+      .collect();
+
+    const courseIds = departmentCourses.map((c) => c._id);
+
+    // Get all sections for courses in this department
+    let sections = await ctx.db.query("sections").collect();
+    sections = sections.filter((section) => courseIds.includes(section.courseId));
+
+    // Filter by term if provided
+    if (args.termId) {
+      sections = sections.filter((section) => section.termId === args.termId);
+    }
+
+    // Build the report data
+    const reportData = await Promise.all(
+      sections.map(async (section) => {
+        const course = await ctx.db.get(section.courseId);
+        const term = await ctx.db.get(section.termId);
+        const session = term ? await ctx.db.get(term.sessionId) : null;
+        const instructor = section.instructorId
+          ? await ctx.db.get(section.instructorId)
+          : null;
+
+        let instructorName = "Unassigned";
+        if (instructor && instructor.roles.includes("instructor")) {
+          instructorName = `${instructor.profile.firstName} ${instructor.profile.lastName}`;
+        }
+
+        return {
+          Term: term?.name || "Unknown",
+          Session: session?.yearLabel || "Unknown",
+          Course: course?.title || "Unknown",
+          InstructorName: instructorName,
+          Capacity: section.capacity,
+        };
+      })
+    );
+
+    return reportData;
+  },
+});
+
+/**
  * Assign an instructor to a section
  * Validates that the instructor belongs to the department
  */
@@ -823,7 +914,37 @@ export const assignInstructor = mutation({
       instructorId: args.instructorId,
     });
 
+    // Create notification for the instructor
+    // Note: We create it directly here, but also have triggerAssignmentNotification
+    // as an internal function for potential future use (e.g., from actions or scheduled tasks)
+    await ctx.db.insert("notifications", {
+      userId: args.instructorId,
+      message: `You have been assigned to ${course.title}`,
+      read: false,
+      createdAt: Date.now(),
+    });
+
     return { success: true };
+  },
+});
+
+/**
+ * Internal function to trigger assignment notification
+ * Creates a notification record for the instructor when assigned to a course
+ */
+export const triggerAssignmentNotification = internalMutation({
+  args: {
+    instructorId: v.id("users"),
+    courseName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Create notification for the instructor
+    await ctx.db.insert("notifications", {
+      userId: args.instructorId,
+      message: `You have been assigned to ${args.courseName}`,
+      read: false,
+      createdAt: Date.now(),
+    });
   },
 });
 
@@ -891,6 +1012,85 @@ export const removeInstructor = mutation({
     await ctx.db.patch(args.sectionId, {
       instructorId: userId, // Department head as placeholder
     });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Delete a section
+ * Validates that the section belongs to the department and has no enrollments
+ */
+export const deleteSection = mutation({
+  args: {
+    token: v.optional(v.string()),
+    sectionId: v.id("sections"),
+  },
+  handler: async (ctx, args) => {
+    // Validate session token and get user
+    if (!args.token) {
+      throw new ValidationError("token", "Authentication required");
+    }
+
+    const userId = await validateSessionToken(ctx.db, args.token);
+    if (!userId) {
+      throw new ValidationError("token", "Invalid session token");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new NotFoundError("User", userId);
+    }
+
+    // Verify role is department_head
+    if (!user.roles.includes("department_head")) {
+      throw new Error("Access denied: Department head role required");
+    }
+
+    // Find department where this user is the head
+    const department = await ctx.db
+      .query("departments")
+      .withIndex("by_headId", (q) => q.eq("headId", userId))
+      .first();
+
+    if (!department) {
+      throw new Error("Department not found for this user");
+    }
+
+    // Get the section
+    const section = await ctx.db.get(args.sectionId);
+    if (!section) {
+      throw new NotFoundError("Section", args.sectionId);
+    }
+
+    // Validate that the section's course belongs to this department
+    const course = await ctx.db.get(section.courseId);
+    if (!course) {
+      throw new NotFoundError("Course", section.courseId);
+    }
+
+    if (course.departmentId !== department._id) {
+      throw new ValidationError(
+        "sectionId",
+        "Section does not belong to your department"
+      );
+    }
+
+    // Check if there are any enrollments for this section
+    const enrollments = await ctx.db
+      .query("enrollments")
+      .withIndex("by_sectionId", (q) => q.eq("sectionId", args.sectionId))
+      .collect();
+
+    if (enrollments.length > 0) {
+      throw new ValidationError(
+        "sectionId",
+        `Cannot delete section: ${enrollments.length} student(s) are enrolled. Please remove enrollments first.`
+      );
+    }
+
+    // Delete the section
+    await ctx.db.delete(args.sectionId);
 
     return { success: true };
   },
