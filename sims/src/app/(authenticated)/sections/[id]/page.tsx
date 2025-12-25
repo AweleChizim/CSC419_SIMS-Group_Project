@@ -16,6 +16,7 @@ import { Modal } from "@/components/ui/modal";
 import CreateAssessmentForm from "./_components/CreateAssessmentForm";
 import EditAssessmentForm from "./_components/EditAssessmentForm";
 import AssessmentsList from "./_components/AssessmentsList";
+import GradebookMatrix from "./_components/GradebookMatrix";
 import { useMutation } from "convex/react";
 
 // TabPane component to properly type the tab prop
@@ -279,10 +280,7 @@ export default function SectionDetailPage() {
                 title="Gradebook"
                 desc="View and manage student grades for this section"
               >
-                <div className="py-12 text-center text-gray-500 dark:text-gray-400">
-                  <p className="text-lg font-medium mb-2">Gradebook feature coming soon</p>
-                  <p className="text-sm">This section will allow you to view and manage student grades</p>
-                </div>
+                <GradebookMatrix sectionId={sectionId} />
               </ComponentCard>
             </TabPane>
           </Tabs>

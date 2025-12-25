@@ -10,6 +10,7 @@ import { Id } from "../_generated/dataModel";
 import { InvariantViolationError, NotFoundError } from "../lib/errors";
 import { createAuditLog, logCourseGradePosted, logGradeEdited } from "../lib/services/auditLogService";
 import { GradeValue } from "../lib/aggregates/types";
+import { validateSessionToken } from "../lib/session";
 
 /**
  * Converts a numeric score to a letter grade and points
@@ -269,6 +270,178 @@ export const recordFinalGrade = mutation({
       success: true,
       finalGrade: finalGradeValue,
       finalPercentage,
+    };
+  },
+});
+
+/**
+ * Update multiple grades at once
+ * 
+ * Accepts an array of { enrollmentId, assessmentId, score } and upserts the grade records.
+ * This is optimized for bulk grade entry in the gradebook interface.
+ */
+export const updateGrades = mutation({
+  args: {
+    grades: v.array(
+      v.object({
+        enrollmentId: v.id("enrollments"),
+        assessmentId: v.id("assessments"),
+        score: v.number(),
+      })
+    ),
+    token: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Validate session token and get user
+    if (!args.token) {
+      throw new Error("Authentication required");
+    }
+
+    const userId = await validateSessionToken(ctx.db, args.token);
+    if (!userId) {
+      throw new Error("Invalid session token");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Verify role is instructor
+    if (!user.roles.includes("instructor")) {
+      throw new Error("Access denied: Instructor role required");
+    }
+
+    // Process each grade update
+    const results = await Promise.all(
+      args.grades.map(async (gradeInput) => {
+        // Get enrollment and verify it exists
+        const enrollment = await ctx.db.get(gradeInput.enrollmentId);
+        if (!enrollment) {
+          throw new NotFoundError("Enrollment", gradeInput.enrollmentId);
+        }
+
+        // Get section and verify instructor owns it
+        const section = await ctx.db.get(enrollment.sectionId);
+        if (!section) {
+          throw new NotFoundError("Section", enrollment.sectionId);
+        }
+
+        if (section.instructorId !== userId) {
+          throw new Error("Access denied: You can only update grades for your own sections");
+        }
+
+        // Get assessment and validate
+        const assessment = await ctx.db.get(gradeInput.assessmentId);
+        if (!assessment) {
+          throw new NotFoundError("Assessment", gradeInput.assessmentId);
+        }
+
+        if (assessment.sectionId !== section._id) {
+          throw new InvariantViolationError(
+            "GradeMutation",
+            "Assessment Section Match",
+            "Assessment does not belong to the enrollment's section"
+          );
+        }
+
+        // Validate score
+        if (gradeInput.score < 0) {
+          throw new InvariantViolationError(
+            "GradeMutation",
+            "Score Validation",
+            "Score cannot be negative"
+          );
+        }
+
+        if (gradeInput.score > assessment.totalPoints) {
+          throw new InvariantViolationError(
+            "GradeMutation",
+            "Score Validation",
+            `Score (${gradeInput.score}) exceeds maximum score (${assessment.totalPoints})`
+          );
+        }
+
+        // Calculate grade value from score
+        const gradeValue = calculateGradeValue(gradeInput.score, assessment.totalPoints);
+
+        // Check if grade already exists
+        const existingGrades = await ctx.db
+          .query("grades")
+          .withIndex("by_enrollmentId_assessmentId", (q) =>
+            q.eq("enrollmentId", gradeInput.enrollmentId).eq("assessmentId", gradeInput.assessmentId)
+          )
+          .collect();
+
+        let gradeId: Id<"grades">;
+        const isUpdate = existingGrades.length > 0;
+
+        if (isUpdate) {
+          // Update existing grade
+          const existingGrade = existingGrades[0];
+          await ctx.db.patch(existingGrade._id, {
+            grade: gradeValue,
+            recordedBy: userId,
+          });
+          gradeId = existingGrade._id;
+        } else {
+          // Create new grade
+          gradeId = await ctx.db.insert("grades", {
+            enrollmentId: gradeInput.enrollmentId,
+            assessmentId: gradeInput.assessmentId,
+            grade: gradeValue,
+            recordedBy: userId,
+          });
+        }
+
+        // Create audit log entry
+        if (isUpdate) {
+          const previousGrade = existingGrades[0].grade.letter;
+          await logGradeEdited(
+            ctx.db,
+            userId,
+            gradeId,
+            previousGrade,
+            gradeValue.letter,
+            {
+              enrollmentId: gradeInput.enrollmentId,
+              assessmentId: gradeInput.assessmentId,
+              score: gradeInput.score,
+              totalPoints: assessment.totalPoints,
+              previousScore: existingGrades[0].grade.numeric,
+              newScore: gradeValue.numeric,
+            }
+          );
+        } else {
+          await logCourseGradePosted(
+            ctx.db,
+            userId,
+            gradeId,
+            {
+              enrollmentId: gradeInput.enrollmentId,
+              assessmentId: gradeInput.assessmentId,
+              score: gradeInput.score,
+              totalPoints: assessment.totalPoints,
+              gradeValue,
+              studentId: enrollment.studentId,
+              sectionId: section._id,
+            }
+          );
+        }
+
+        return {
+          success: true,
+          gradeId,
+          enrollmentId: gradeInput.enrollmentId,
+          assessmentId: gradeInput.assessmentId,
+        };
+      })
+    );
+
+    return {
+      success: true,
+      updated: results.length,
+      results,
     };
   },
 });
