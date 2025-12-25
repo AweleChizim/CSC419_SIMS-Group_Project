@@ -137,7 +137,31 @@ export default function SectionsPage() {
       setPublishMessage(`Successfully published ${result.count} section(s)`);
       setTimeout(() => setPublishMessage(null), 3000);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to publish sections';
+      // Parse error message to extract user-friendly message
+      let errorMessage = 'Failed to publish sections. Please try again.';
+      
+      if (error instanceof Error) {
+        const errorStr = error.message;
+        
+        if (errorStr.includes('Access denied')) {
+          errorMessage = 'You do not have permission to publish sections. Please contact your administrator.';
+        } else if (errorStr.includes('Authentication required') || errorStr.includes('Invalid session token')) {
+          errorMessage = 'Your session has expired. Please log in again to continue.';
+        } else if (errorStr.includes('not found')) {
+          errorMessage = 'One or more sections could not be found. Please refresh the page and try again.';
+        } else if (errorStr.includes('Validation error')) {
+          // Extract user-friendly message from ValidationError
+          const match = errorStr.match(/Validation error for field '[^']+': (.+)/);
+          if (match) {
+            errorMessage = match[1];
+          } else {
+            errorMessage = errorStr.replace(/Validation error for field '[^']+': /, '');
+          }
+        } else {
+          errorMessage = errorStr;
+        }
+      }
+      
       setPublishErrorMessage(errorMessage);
       setTimeout(() => setPublishErrorMessage(null), 5000);
     }

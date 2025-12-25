@@ -157,20 +157,41 @@ export default function CreateAssessmentForm({
       onSuccess?.();
       onClose();
     } catch (error) {
-      // Check if it's a weight validation error and show user-friendly message
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred while creating the assessment';
+      // Parse error message to extract user-friendly message
+      let errorMessage = 'An error occurred while creating the assessment. Please try again.';
       
-      // If it's a weight validation error, show the warning instead of the raw error
-      if (errorMessage.includes('total weight') || errorMessage.includes('exceeding 100%')) {
-        const weight = parseFloat(formData.weight);
-        if (!isNaN(weight)) {
-          const currentTotal = existingAssessments.reduce((sum, a) => sum + a.weight, 0);
-          const newTotal = currentTotal + weight;
-          setWeightWarning(`Warning: Total weight would be ${newTotal.toFixed(1)}%, exceeding 100%`);
+      if (error instanceof Error) {
+        const errorStr = error.message;
+        
+        // If it's a weight validation error, show the warning instead of the raw error
+        if (errorStr.includes('total weight') || errorStr.includes('exceeding 100%')) {
+          const weight = parseFloat(formData.weight);
+          if (!isNaN(weight)) {
+            const currentTotal = existingAssessments.reduce((sum, a) => sum + a.weight, 0);
+            const newTotal = currentTotal + weight;
+            setWeightWarning(`Warning: Total weight would be ${newTotal.toFixed(1)}%, exceeding 100%`);
+          }
+          return; // Don't set apiError for weight warnings
+        } else if (errorStr.includes('Validation error')) {
+          // Extract user-friendly message from ValidationError
+          const match = errorStr.match(/Validation error for field '[^']+': (.+)/);
+          if (match) {
+            errorMessage = match[1];
+          } else {
+            errorMessage = errorStr.replace(/Validation error for field '[^']+': /, '');
+          }
+        } else if (errorStr.includes('Access denied')) {
+          errorMessage = 'You do not have permission to create assessments for this section.';
+        } else if (errorStr.includes('Authentication required') || errorStr.includes('Invalid session token')) {
+          errorMessage = 'Your session has expired. Please log in again to continue.';
+        } else if (errorStr.includes('not found')) {
+          errorMessage = 'The section or assessment could not be found. Please refresh the page and try again.';
+        } else {
+          errorMessage = errorStr;
         }
-      } else {
-        setApiError(errorMessage);
       }
+      
+      setApiError(errorMessage);
     } finally {
       setIsLoading(false);
     }

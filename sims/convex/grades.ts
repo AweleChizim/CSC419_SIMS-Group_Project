@@ -143,6 +143,10 @@ export const getBySection = query({
         totalPoints: a.totalPoints,
         weight: a.weight,
       })),
+      section: {
+        finalGradesPosted: section.finalGradesPosted ?? false,
+        gradesEditable: section.gradesEditable ?? true,
+      },
     };
   },
 });

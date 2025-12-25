@@ -75,6 +75,11 @@ export const recordGrade = mutation({
       throw new NotFoundError("Section", enrollment.sectionId);
     }
 
+    // Check if grades are editable (final grades posted and not reopened by registrar)
+    if (section.finalGradesPosted && section.gradesEditable === false) {
+      throw new Error("Grades cannot be edited. Final grades have been posted for this section. Please contact the registrar if you need to make changes.");
+    }
+
     // Step 2: Read assessment and validate score
     // Invariant Check: score must be ≤ assessment.totalPoints
     const assessment = await ctx.db.get(args.assessmentId);
@@ -329,6 +334,11 @@ export const updateGrades = mutation({
 
         if (section.instructorId !== userId) {
           throw new Error("Access denied: You can only update grades for your own sections");
+        }
+
+        // Check if grades are editable (final grades posted and not reopened by registrar)
+        if (section.finalGradesPosted && section.gradesEditable === false) {
+          throw new Error("Grades cannot be edited. Final grades have been posted for this section. Please contact the registrar if you need to make changes.");
         }
 
         // Get assessment and validate

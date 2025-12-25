@@ -28,6 +28,8 @@ interface GradebookMatrixTableProps {
   gradeValues: Map<string, string>;
   onScoreChange: (enrollmentId: Id<"enrollments">, assessmentId: Id<"assessments">, value: string) => void;
   calculateAverage: (assessmentId: Id<"assessments">) => number | null;
+  calculateFinalGrade?: (enrollmentId: Id<"enrollments">) => { percentage: number; letter: string; points: number } | null;
+  disabled?: boolean; // If true, disable all input fields
 }
 
 export default function GradebookMatrixTable({
@@ -36,6 +38,8 @@ export default function GradebookMatrixTable({
   gradeValues,
   onScoreChange,
   calculateAverage,
+  calculateFinalGrade,
+  disabled = false,
 }: GradebookMatrixTableProps) {
   return (
     <div className="overflow-x-auto border border-gray-200 dark:border-gray-800 rounded-lg">
@@ -58,6 +62,14 @@ export default function GradebookMatrixTable({
                 </div>
               </th>
             ))}
+            <th className="sticky right-0 z-10 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[140px] border-l border-gray-200 dark:border-gray-800">
+              <div className="flex flex-col">
+                <span className="font-semibold">Final Grade</span>
+                <span className="text-xs font-normal text-gray-400 dark:text-gray-500 mt-1">
+                  (Projected)
+                </span>
+              </div>
+            </th>
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-gray-950 divide-y divide-gray-200 dark:divide-gray-800">
@@ -88,12 +100,31 @@ export default function GradebookMatrixTable({
                       step="0.01"
                       value={value}
                       onChange={(e) => onScoreChange(enrollment.enrollmentId, assessment._id, e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={disabled}
+                      className={`w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        disabled ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''
+                      }`}
                       placeholder={existingGrade ? existingGrade.score.toString() : '0'}
                     />
                   </td>
                 );
               })}
+              <td className="sticky right-0 z-10 bg-white dark:bg-gray-950 px-4 py-3 text-sm text-center text-gray-800 dark:text-white/90 border-l border-gray-200 dark:border-gray-800 font-medium">
+                {calculateFinalGrade ? (() => {
+                  const finalGrade = calculateFinalGrade(enrollment.enrollmentId);
+                  if (finalGrade) {
+                    return (
+                      <div className="flex flex-col items-center">
+                        <span className="font-semibold">{finalGrade.letter}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {finalGrade.percentage.toFixed(1)}% ({finalGrade.points.toFixed(1)})
+                        </span>
+                      </div>
+                    );
+                  }
+                  return <span className="text-gray-400">—</span>;
+                })() : <span className="text-gray-400">—</span>}
+              </td>
             </tr>
           ))}
           {/* Average row */}
@@ -109,6 +140,9 @@ export default function GradebookMatrixTable({
                 </td>
               );
             })}
+            <td className="sticky right-0 z-10 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-sm text-center text-gray-800 dark:text-white/90 border-l border-gray-200 dark:border-gray-800">
+              —
+            </td>
           </tr>
         </tbody>
       </table>
