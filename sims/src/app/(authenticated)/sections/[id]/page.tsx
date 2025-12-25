@@ -17,6 +17,7 @@ import CreateAssessmentForm from "./_components/CreateAssessmentForm";
 import EditAssessmentForm from "./_components/EditAssessmentForm";
 import AssessmentsList from "./_components/AssessmentsList";
 import GradebookMatrix from "./_components/GradebookMatrix";
+import Alert from "@/components/ui/alert/Alert";
 import { useMutation } from "convex/react";
 
 // TabPane component to properly type the tab prop
@@ -55,6 +56,7 @@ export default function SectionDetailPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<{ variant: 'error' | 'success' | 'warning' | 'info'; title: string; message: string } | null>(null);
 
   const deleteAssessmentMutation = useMutation(
     (api as any)["mutations/assessmentMutations"].deleteAssessment
@@ -81,6 +83,31 @@ export default function SectionDetailPage() {
     api.assessments.getBySection,
     sectionId ? { sectionId } : "skip"
   );
+
+  // Fetch gradebook data to check which assessments have grades
+  const gradebookData = useQuery(
+    api.grades.getBySection,
+    sessionToken && sectionId
+      ? { sectionId, token: sessionToken }
+      : "skip"
+  );
+
+  // Create a set of assessment IDs that have grades
+  const assessmentsWithGrades = new Set<Id<"assessments">>();
+  if (gradebookData) {
+    const data = gradebookData as {
+      enrollments: Array<{
+        grades: Array<{
+          assessmentId: Id<"assessments">;
+        }>;
+      }>;
+    };
+    data.enrollments.forEach((enrollment) => {
+      enrollment.grades.forEach((grade) => {
+        assessmentsWithGrades.add(grade.assessmentId);
+      });
+    });
+  }
 
   const isLoading = roster === undefined;
 
@@ -119,9 +146,42 @@ export default function SectionDetailPage() {
 
       setIsDeleteModalOpen(false);
       setSelectedAssessment(null);
+      setAlertMessage({
+        variant: 'success',
+        title: 'Success',
+        message: `Assessment "${selectedAssessment.title}" has been deleted successfully.`,
+      });
+      setTimeout(() => setAlertMessage(null), 5000);
     } catch (error) {
       console.error('Error deleting assessment:', error);
-      alert(error instanceof Error ? error.message : 'Failed to delete assessment');
+      
+      // Parse error message for user-friendly display
+      let errorTitle = 'Error Deleting Assessment';
+      let errorMessage = 'Failed to delete assessment. Please try again.';
+      
+      if (error instanceof Error) {
+        const errorStr = error.message;
+        
+        if (errorStr.includes('grades have been recorded')) {
+          errorTitle = 'Cannot Delete Assessment';
+          errorMessage = 'This assessment cannot be deleted because grades have been recorded for it. Please remove all grades before deleting the assessment.';
+        } else if (errorStr.includes('not found')) {
+          errorTitle = 'Assessment Not Found';
+          errorMessage = 'The assessment you are trying to delete no longer exists.';
+        } else if (errorStr.includes('Access denied') || errorStr.includes('permission')) {
+          errorTitle = 'Access Denied';
+          errorMessage = 'You do not have permission to delete this assessment.';
+        } else {
+          errorMessage = errorStr;
+        }
+      }
+      
+      setAlertMessage({
+        variant: 'error',
+        title: errorTitle,
+        message: errorMessage,
+      });
+      setTimeout(() => setAlertMessage(null), 10000);
     } finally {
       setIsDeleting(false);
     }
@@ -143,6 +203,15 @@ export default function SectionDetailPage() {
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Alert messages */}
+          {alertMessage && (
+            <Alert
+              variant={alertMessage.variant}
+              title={alertMessage.title}
+              message={alertMessage.message}
+            />
+          )}
+
           <Tabs tabStyle="independent" justifyTabs="left">
             <TabPane tab="Roster">
               <ComponentCard
@@ -214,6 +283,7 @@ export default function SectionDetailPage() {
                     isLoading={assessments === undefined}
                     onEdit={handleEdit}
                     onDelete={handleDeleteClick}
+                    assessmentsWithGrades={assessmentsWithGrades}
                   />
                 </div>
               </ComponentCard>

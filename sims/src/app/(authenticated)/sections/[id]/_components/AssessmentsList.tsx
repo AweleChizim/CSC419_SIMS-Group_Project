@@ -19,9 +19,10 @@ interface AssessmentsListProps {
   isLoading?: boolean;
   onEdit?: (assessment: Assessment) => void;
   onDelete?: (assessment: Assessment) => void;
+  assessmentsWithGrades?: Set<Id<"assessments">>;
 }
 
-export default function AssessmentsList({ assessments, isLoading, onEdit, onDelete }: AssessmentsListProps) {
+export default function AssessmentsList({ assessments, isLoading, onEdit, onDelete, assessmentsWithGrades = new Set() }: AssessmentsListProps) {
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString('en-US', {
@@ -112,8 +113,17 @@ export default function AssessmentsList({ assessments, isLoading, onEdit, onDele
                       {onEdit && (
                         <button
                           onClick={() => onEdit(assessment)}
-                          className="flex items-center justify-center rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                          title="Edit assessment"
+                          disabled={assessmentsWithGrades.has(assessment._id)}
+                          className={`flex items-center justify-center rounded-lg p-2 transition-colors ${
+                            assessmentsWithGrades.has(assessment._id)
+                              ? 'text-gray-400 cursor-not-allowed opacity-50 dark:text-gray-600'
+                              : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                          }`}
+                          title={
+                            assessmentsWithGrades.has(assessment._id)
+                              ? 'Cannot edit: This assessment has grades recorded'
+                              : 'Edit assessment'
+                          }
                         >
                           <PencilIcon className="h-4 w-4" />
                         </button>
@@ -121,8 +131,17 @@ export default function AssessmentsList({ assessments, isLoading, onEdit, onDele
                       {onDelete && (
                         <button
                           onClick={() => onDelete(assessment)}
-                          className="flex items-center justify-center rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                          title="Delete assessment"
+                          disabled={assessmentsWithGrades.has(assessment._id)}
+                          className={`flex items-center justify-center rounded-lg p-2 transition-colors ${
+                            assessmentsWithGrades.has(assessment._id)
+                              ? 'text-gray-400 cursor-not-allowed opacity-50 dark:text-gray-600'
+                              : 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20'
+                          }`}
+                          title={
+                            assessmentsWithGrades.has(assessment._id)
+                              ? 'Cannot delete: This assessment has grades recorded'
+                              : 'Delete assessment'
+                          }
                         >
                           <TrashBinIcon className="h-4 w-4" />
                         </button>

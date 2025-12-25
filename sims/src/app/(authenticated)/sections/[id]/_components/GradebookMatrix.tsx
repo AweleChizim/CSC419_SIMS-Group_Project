@@ -8,6 +8,7 @@ import { Id } from '@/lib/convex';
 import Button from '@/components/ui/button/Button';
 import GradebookMatrixTable from '@/components/tables/GradebookMatrixTable';
 import Alert from '@/components/ui/alert/Alert';
+import BulkGradeUpload from './BulkGradeUpload';
 
 type Assessment = {
   _id: Id<"assessments">;
@@ -61,6 +62,7 @@ export default function GradebookMatrix({ sectionId }: GradebookMatrixProps) {
   const [gradeValues, setGradeValues] = useState<Map<string, string>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   
   // Alert state
   const [alertMessage, setAlertMessage] = useState<{ variant: 'error' | 'success' | 'warning' | 'info'; title: string; message: string } | null>(null);
@@ -274,6 +276,36 @@ export default function GradebookMatrix({ sectionId }: GradebookMatrixProps) {
     );
   }
 
+  // Handle bulk upload save
+  const handleBulkSave = async (grades: Array<{
+    enrollmentId: Id<"enrollments">;
+    assessmentId: Id<"assessments">;
+    score: number;
+  }>) => {
+    if (!sessionToken) return;
+
+    setIsSaving(true);
+    try {
+      await updateGradesMutation({
+        grades,
+        token: sessionToken,
+      });
+      setHasChanges(false);
+    } catch (error) {
+      console.error('Error saving bulk grades:', error);
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle bulk upload completion
+  const handleBulkUploadComplete = () => {
+    // Refresh the gradebook data by triggering a re-render
+    // The useQuery will automatically refetch
+    setShowBulkUpload(false);
+  };
+
   return (
     <div className="space-y-4">
       {/* Alert messages */}
@@ -285,25 +317,51 @@ export default function GradebookMatrix({ sectionId }: GradebookMatrixProps) {
         />
       )}
 
-      {/* Save button */}
-      <div className="flex justify-end">
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={!hasChanges || isSaving}
-        >
-          {isSaving ? 'Saving...' : 'Save Grades'}
-        </Button>
+      {/* Toggle between manual entry and bulk upload */}
+      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-4">
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={!showBulkUpload ? "primary" : "outline"}
+            onClick={() => setShowBulkUpload(false)}
+          >
+            Manual Entry
+          </Button>
+          <Button
+            size="sm"
+            variant={showBulkUpload ? "primary" : "outline"}
+            onClick={() => setShowBulkUpload(true)}
+          >
+            Bulk Upload
+          </Button>
+        </div>
+        {!showBulkUpload && (
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={!hasChanges || isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Save Grades'}
+          </Button>
+        )}
       </div>
 
-      {/* Gradebook matrix */}
-      <GradebookMatrixTable
-        enrollments={gradebookData.enrollments}
-        assessments={gradebookData.assessments}
-        gradeValues={gradeValues}
-        onScoreChange={handleScoreChange}
-        calculateAverage={calculateAverage}
-      />
+      {showBulkUpload ? (
+        <BulkGradeUpload
+          sectionId={sectionId}
+          gradebookData={gradebookData}
+          onUploadComplete={handleBulkUploadComplete}
+          onSaveGrades={handleBulkSave}
+        />
+      ) : (
+        <GradebookMatrixTable
+          enrollments={gradebookData.enrollments}
+          assessments={gradebookData.assessments}
+          gradeValues={gradeValues}
+          onScoreChange={handleScoreChange}
+          calculateAverage={calculateAverage}
+        />
+      )}
     </div>
   );
 }
