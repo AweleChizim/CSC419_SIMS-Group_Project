@@ -15,6 +15,7 @@ import type * as dashboard from "../dashboard.js";
 import type * as department from "../department.js";
 import type * as departments from "../departments.js";
 import type * as examples_studentMutations from "../examples/studentMutations.js";
+import type * as instructors from "../instructors.js";
 import type * as lib_aggregates_academicCalendarAggregate from "../lib/aggregates/academicCalendarAggregate.js";
 import type * as lib_aggregates_courseAggregate from "../lib/aggregates/courseAggregate.js";
 import type * as lib_aggregates_enrollmentAggregate from "../lib/aggregates/enrollmentAggregate.js";
@@ -61,6 +62,7 @@ declare const fullApi: ApiFromModules<{
   department: typeof department;
   departments: typeof departments;
   "examples/studentMutations": typeof examples_studentMutations;
+  instructors: typeof instructors;
   "lib/aggregates/academicCalendarAggregate": typeof lib_aggregates_academicCalendarAggregate;
   "lib/aggregates/courseAggregate": typeof lib_aggregates_courseAggregate;
   "lib/aggregates/enrollmentAggregate": typeof lib_aggregates_enrollmentAggregate;
