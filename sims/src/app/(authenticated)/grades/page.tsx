@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from 'convex/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/convex';
 import PageBreadCrumb from '@/components/common/PageBreadCrumb';
 import Loading from '@/components/loading/Loading';
@@ -44,6 +44,10 @@ type ActiveGrade = {
 
 export default function GradesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get courseId from query parameters
+  const courseIdFromQuery = searchParams.get('courseId');
   
   // Initialize session token from localStorage
   const [sessionToken] = useState<string | null>(() => {
@@ -53,12 +57,83 @@ export default function GradesPage() {
     return null;
   });
 
+  // State to track which accordions are open
+  const [openAccordions, setOpenAccordions] = useState<Set<string>>(new Set());
+  
+  // State for real-time alert
+  const [alertMessage, setAlertMessage] = useState<{ variant: 'success' | 'error' | 'warning' | 'info'; title: string; message: string } | null>(null);
+
 
   // Fetch active grades
   const gradesData = useQuery(
     api.grades.getMyActiveGrades,
     sessionToken ? { token: sessionToken } : 'skip'
   ) as ActiveGrade[] | undefined | Error;
+
+  // Fetch notifications for real-time updates
+  const notifications = useQuery(
+    api.notifications.getMyNotifications,
+    sessionToken ? { token: sessionToken } : 'skip'
+  ) as Array<{
+    _id: string;
+    message: string;
+    read: boolean;
+    createdAt: number;
+    courseId?: string;
+  }> | undefined;
+
+  // Track the last notification timestamp to detect new ones
+  const [lastNotificationTime, setLastNotificationTime] = useState<number>(Date.now());
+
+  // Effect to expand accordion based on query parameter
+  useEffect(() => {
+    if (courseIdFromQuery && gradesData && Array.isArray(gradesData)) {
+      const course = gradesData.find((g) => g.course._id === courseIdFromQuery);
+      if (course) {
+        setOpenAccordions(new Set([course.enrollmentId]));
+        // Remove query parameter from URL after expanding
+        router.replace('/grades', { scroll: false });
+      }
+    }
+  }, [courseIdFromQuery, gradesData, router]);
+
+  // Effect to show real-time alert when new grade notification is received
+  useEffect(() => {
+    if (notifications && notifications.length > 0) {
+      // Find the most recent unread notification about grades
+      const gradeNotifications = notifications.filter(
+        (n) => !n.read && n.message.includes('New grade posted') && n.createdAt > lastNotificationTime
+      );
+      
+      if (gradeNotifications.length > 0) {
+        const latestNotification = gradeNotifications[0];
+        setAlertMessage({
+          variant: 'info',
+          title: 'New Grade Posted',
+          message: latestNotification.message,
+        });
+        setLastNotificationTime(latestNotification.createdAt);
+        
+        // Auto-dismiss after 8 seconds
+        const timer = setTimeout(() => {
+          setAlertMessage(null);
+        }, 8000);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [notifications, lastNotificationTime]);
+
+  // Initialize lastNotificationTime when component mounts or notifications load
+  useEffect(() => {
+    if (notifications && notifications.length > 0) {
+      const latestTime = Math.max(...notifications.map((n) => n.createdAt));
+      if (latestTime > lastNotificationTime) {
+        setLastNotificationTime(latestTime);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notifications]);
 
 
   const formatDate = (timestamp: number) => {
@@ -123,11 +198,34 @@ export default function GradesPage() {
     );
   }
 
+  // Handle accordion toggle
+  const handleAccordionToggle = (enrollmentId: string, isOpen: boolean) => {
+    setOpenAccordions((prev) => {
+      const newSet = new Set(prev);
+      if (isOpen) {
+        newSet.add(enrollmentId);
+      } else {
+        newSet.delete(enrollmentId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div>
       <PageBreadCrumb pageTitle="My Grades" />
 
       <div className="space-y-6">
+        {/* Real-time Alert */}
+        {alertMessage && (
+          <div className="fixed top-20 right-4 z-50 w-full max-w-md animate-in slide-in-from-top-5">
+            <Alert
+              variant={alertMessage.variant}
+              title={alertMessage.title}
+              message={alertMessage.message}
+            />
+          </div>
+        )}
         {/* GPA Calculator Button */}
         <div className="flex justify-end">
           <Button
@@ -151,6 +249,8 @@ export default function GradesPage() {
                 key={gradeData.enrollmentId}
                 title={`${course.code} - ${course.title}`}
                 subtitle={`${course.credits} Credits`}
+                isOpen={openAccordions.has(gradeData.enrollmentId)}
+                onToggle={(isOpen) => handleAccordionToggle(gradeData.enrollmentId, isOpen)}
                 headerContent={
                   <>
                     {/* Current Grade */}

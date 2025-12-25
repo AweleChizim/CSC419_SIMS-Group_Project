@@ -2,13 +2,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import React, { useState, useMemo } from 'react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/convex';
 import { Dropdown } from '../ui/dropdown/Dropdown';
 import { DropdownItem } from '../ui/dropdown/DropdownItem';
 
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
   
   // Initialize session token from localStorage
   const [sessionToken] = useState<string | null>(() => {
@@ -27,7 +29,11 @@ export default function NotificationDropdown() {
     message: string;
     read: boolean;
     createdAt: number;
+    courseId?: string;
   }> | undefined;
+
+  // Mutation to mark notification as read
+  const markAsRead = useMutation(api.notifications.markAsRead);
 
   // Fetch unread count
   const unreadCount = useQuery(
@@ -71,6 +77,37 @@ export default function NotificationDropdown() {
       return 'Just now';
     }
   };
+
+  // Handle notification click
+  const handleNotificationClick = async (notification: {
+    _id: string;
+    message: string;
+    read: boolean;
+    createdAt: number;
+    courseId?: string;
+  }) => {
+    // Mark as read if not already read
+    if (!notification.read && sessionToken) {
+      try {
+        await markAsRead({
+          notificationId: notification._id as any,
+          token: sessionToken,
+        });
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+      }
+    }
+
+    // Close dropdown
+    closeDropdown();
+
+    // Redirect to grades page with courseId if available
+    if (notification.courseId) {
+      router.push(`/grades?courseId=${notification.courseId}`);
+    } else {
+      router.push('/grades');
+    }
+  };
   return (
     <div className="relative">
       <button
@@ -78,8 +115,8 @@ export default function NotificationDropdown() {
         onClick={handleClick}
       >
         {hasUnread && (
-          <span className="absolute top-0.5 right-0 z-10 h-2 w-2 rounded-full bg-orange-400 flex">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75"></span>
+          <span className="absolute top-0.5 right-0 z-10 h-2 w-2 rounded-full bg-red-500 flex">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75"></span>
           </span>
         )}
         <svg
@@ -139,8 +176,8 @@ export default function NotificationDropdown() {
             notifications.map((notification) => (
               <li key={notification._id}>
                 <DropdownItem
-                  onItemClick={closeDropdown}
-                  className={`flex gap-3 rounded-lg border-b border-gray-100 p-3 px-4.5 py-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5 ${
+                  onItemClick={() => handleNotificationClick(notification)}
+                  className={`flex gap-3 rounded-lg border-b border-gray-100 p-3 px-4.5 py-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5 cursor-pointer ${
                     !notification.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
                   }`}
                 >
@@ -179,7 +216,7 @@ export default function NotificationDropdown() {
           )}
         </ul>
         <Link
-          href="/"
+          href="/notifications"
           className="mt-3 block rounded-lg border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
         >
           View All Notifications

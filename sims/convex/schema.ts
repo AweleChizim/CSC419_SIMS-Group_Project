@@ -362,13 +362,14 @@ export default defineSchema({
   /**
    * Notifications Collection
    * Represents user notifications
-   * Foreign Keys: userId → users._id
+   * Foreign Keys: userId → users._id, courseId → courses._id (optional, for grade notifications)
    */
   notifications: defineTable({
     userId: v.id("users"),
     message: v.string(),
     read: v.boolean(),
     createdAt: v.number(), // Unix timestamp
+    courseId: v.optional(v.id("courses")), // Optional course ID for navigation (e.g., grade notifications)
   })
     .index("by_userId", ["userId"])
     .index("by_userId_read", ["userId", "read"])

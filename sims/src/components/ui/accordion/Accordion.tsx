@@ -7,6 +7,8 @@ interface AccordionProps {
   subtitle?: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  isOpen?: boolean; // Controlled state
+  onToggle?: (isOpen: boolean) => void; // Callback for controlled state
   headerContent?: React.ReactNode;
   className?: string;
 }
@@ -16,10 +18,24 @@ export const Accordion: React.FC<AccordionProps> = ({
   subtitle,
   children,
   defaultOpen = false,
+  isOpen: controlledIsOpen,
+  onToggle,
   headerContent,
   className = '',
 }) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [internalIsOpen, setInternalIsOpen] = useState(defaultOpen);
+  
+  // Use controlled state if provided, otherwise use internal state
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  
+  const handleToggle = () => {
+    const newIsOpen = !isOpen;
+    if (onToggle) {
+      onToggle(newIsOpen);
+    } else {
+      setInternalIsOpen(newIsOpen);
+    }
+  };
 
   return (
     <div
@@ -27,7 +43,7 @@ export const Accordion: React.FC<AccordionProps> = ({
     >
       {/* Accordion Header - Clickable */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className="w-full px-6 py-5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
       >
         <div className="flex items-center justify-between">

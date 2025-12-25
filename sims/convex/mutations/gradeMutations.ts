@@ -452,6 +452,24 @@ export const updateGrades = mutation({
               sectionId: section._id,
             }
           );
+
+          // Create notification for the student when a new grade is posted
+          // Get course information
+          const course = await ctx.db.get(section.courseId);
+          if (course) {
+            // Get student's userId
+            const student = await ctx.db.get(enrollment.studentId);
+            if (student) {
+              // Create notification
+              await ctx.db.insert("notifications", {
+                userId: student.userId,
+                message: `New grade posted for ${course.title}: ${assessment.title}`,
+                read: false,
+                createdAt: Date.now(),
+                courseId: course._id,
+              });
+            }
+          }
         }
 
         return {
