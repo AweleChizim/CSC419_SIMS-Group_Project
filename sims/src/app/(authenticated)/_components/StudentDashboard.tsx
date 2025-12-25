@@ -75,7 +75,16 @@ export default function StudentDashboardView() {
     sessionToken ? { token: sessionToken } : "skip"
   ) as {
     cumulativeGPA: number;
-    groupedData: Record<string, unknown[]>;
+    groupedData: Record<string, Array<{
+      courseCode: string;
+      courseTitle: string;
+      credits: number;
+      grade: {
+        percentage: number;
+        letter: string;
+        points: number;
+      };
+    }>>;
     termGPAs: Record<string, number>;
     studentInfo: {
       studentNumber: string;
@@ -98,7 +107,7 @@ export default function StudentDashboardView() {
   // Calculate total credits from transcript entries for more accurate description
   const transcriptTotalCredits = transcriptData && !(transcriptData instanceof Error) && transcriptData.groupedData
     ? Object.values(transcriptData.groupedData).reduce((total, termEntries) => {
-        return total + termEntries.reduce((termTotal, entry: { credits: number }) => termTotal + entry.credits, 0);
+        return total + termEntries.reduce((termTotal, entry) => termTotal + entry.credits, 0);
       }, 0)
     : stats?.academicStats.totalCredits ?? 0;
 
