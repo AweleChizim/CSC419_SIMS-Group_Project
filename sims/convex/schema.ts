@@ -216,8 +216,9 @@ export default defineSchema({
   assessments: defineTable({
     sectionId: v.id("sections"),
     title: v.string(),
-    weight: v.number(),
-    maxScore: v.number(),
+    weight: v.number(), // Weight as percentage (e.g., 30 for 30%)
+    totalPoints: v.number(), // Total points possible for this assessment
+    dueDate: v.number(), // Unix timestamp for due date
   })
     .index("by_sectionId", ["sectionId"]),
 

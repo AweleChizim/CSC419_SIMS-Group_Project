@@ -14,8 +14,8 @@ import { GradeValue } from "../lib/aggregates/types";
 /**
  * Converts a numeric score to a letter grade and points
  */
-function calculateGradeValue(score: number, maxScore: number): GradeValue {
-  const percentage = (score / maxScore) * 100;
+function calculateGradeValue(score: number, totalPoints: number): GradeValue {
+  const percentage = (score / totalPoints) * 100;
 
   let letter: string;
   let points: number;
@@ -75,7 +75,7 @@ export const recordGrade = mutation({
     }
 
     // Step 2: Read assessment and validate score
-    // Invariant Check: score must be ≤ assessment.maxScore
+    // Invariant Check: score must be ≤ assessment.totalPoints
     const assessment = await ctx.db.get(args.assessmentId);
     if (!assessment) {
       throw new NotFoundError("Assessment", args.assessmentId);
@@ -97,16 +97,16 @@ export const recordGrade = mutation({
       );
     }
 
-    if (args.score > assessment.maxScore) {
+    if (args.score > assessment.totalPoints) {
       throw new InvariantViolationError(
         "GradeMutation",
         "Score Validation",
-        `Score (${args.score}) exceeds maximum score (${assessment.maxScore})`
+        `Score (${args.score}) exceeds maximum score (${assessment.totalPoints})`
       );
     }
 
     // Calculate grade value
-    const gradeValue = calculateGradeValue(args.score, assessment.maxScore);
+    const gradeValue = calculateGradeValue(args.score, assessment.totalPoints);
 
     // Step 3: Create or update grade document
     // Check if grade already exists
@@ -151,7 +151,7 @@ export const recordGrade = mutation({
           enrollmentId: args.enrollmentId,
           assessmentId: args.assessmentId,
           score: args.score,
-          maxScore: assessment.maxScore,
+          totalPoints: assessment.totalPoints,
           previousScore: existingGrades[0].grade.numeric,
           newScore: gradeValue.numeric,
         }
@@ -166,7 +166,7 @@ export const recordGrade = mutation({
           enrollmentId: args.enrollmentId,
           assessmentId: args.assessmentId,
           score: args.score,
-          maxScore: assessment.maxScore,
+          totalPoints: assessment.totalPoints,
           gradeValue,
           studentId: enrollment.studentId,
           sectionId: section._id,
