@@ -15,6 +15,8 @@ import Button from '@/components/ui/button/Button';
 import MetricCard from '@/components/common/MetricCard';
 import Select from '@/components/form/Select';
 import { useHasRole } from '@/hooks/useHasRole';
+import { Modal } from '@/components/ui/modal';
+import TextArea from '@/components/form/input/TextArea';
 
 type ActiveGrade = {
   enrollmentId: string;
@@ -62,6 +64,7 @@ type SectionStatus = {
   gradeStatus: "Grades Submitted" | "Pending" | "Locked";
   finalGradesPosted: boolean;
   gradesEditable: boolean;
+  isLocked: boolean;
 };
 
 type Department = {
@@ -148,6 +151,15 @@ export default function GradesPage() {
 
   // Mutation for sending reminder
   const sendReminder = useMutation(api.registrar.sendReminder);
+
+  // Mutation for unlocking section
+  const setSectionLock = useMutation(api.registrar.setSectionLock);
+
+  // State for unlock modal
+  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+  const [selectedSectionForUnlock, setSelectedSectionForUnlock] = useState<Id<"sections"> | null>(null);
+  const [unlockReason, setUnlockReason] = useState('');
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
   // Track the last notification timestamp to detect new ones
   const [lastNotificationTime, setLastNotificationTime] = useState<number>(Date.now());
@@ -264,6 +276,48 @@ export default function GradesPage() {
     }
   };
 
+  // Handle unlock button click
+  const handleUnlockClick = (sectionId: Id<"sections">) => {
+    setSelectedSectionForUnlock(sectionId);
+    setUnlockReason('');
+    setUnlockModalOpen(true);
+  };
+
+  // Handle unlock submission
+  const handleUnlockSubmit = async () => {
+    if (!sessionToken || !selectedSectionForUnlock || !unlockReason.trim()) {
+      return;
+    }
+
+    setIsUnlocking(true);
+    try {
+      await setSectionLock({
+        token: sessionToken,
+        sectionId: selectedSectionForUnlock,
+        locked: false,
+        reason: unlockReason.trim(),
+      });
+      setAlertMessage({
+        variant: 'success',
+        title: 'Section Unlocked',
+        message: 'The section has been unlocked for grading.',
+      });
+      setUnlockModalOpen(false);
+      setSelectedSectionForUnlock(null);
+      setUnlockReason('');
+      setTimeout(() => setAlertMessage(null), 5000);
+    } catch (error) {
+      setAlertMessage({
+        variant: 'error',
+        title: 'Error',
+        message: error instanceof Error ? error.message : 'Failed to unlock section.',
+      });
+      setTimeout(() => setAlertMessage(null), 5000);
+    } finally {
+      setIsUnlocking(false);
+    }
+  };
+
   // Loading and error states
   const isLoading = isRegistrar
     ? sectionsStatus === undefined
@@ -317,6 +371,17 @@ export default function GradesPage() {
               message={alertMessage.message}
             />
           )}
+
+          {/* Audit Log Link */}
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => router.push('/grades/audit-log')}
+            >
+              View Audit Log
+            </Button>
+          </div>
 
           {/* Overview Cards */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -452,7 +517,16 @@ export default function GradesPage() {
                             Remind
                           </Button>
                         )}
-                        {section.gradeStatus !== "Pending" && (
+                        {section.gradeStatus === "Locked" && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleUnlockClick(section._id)}
+                          >
+                            Unlock
+                          </Button>
+                        )}
+                        {section.gradeStatus === "Grades Submitted" && (
                           <span className="text-gray-400 text-sm">—</span>
                         )}
                       </TableCell>
@@ -462,6 +536,62 @@ export default function GradesPage() {
               </TableBody>
             </Table>
           </div>
+
+          {/* Unlock Modal */}
+          <Modal
+            isOpen={unlockModalOpen}
+            onClose={() => {
+              setUnlockModalOpen(false);
+              setSelectedSectionForUnlock(null);
+              setUnlockReason('');
+            }}
+          >
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Unlock Section for Grading
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                Please provide a reason for unlocking this section. This action will be recorded in the audit log.
+              </p>
+              
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Reason <span className="text-error-500">*</span>
+                </label>
+                <TextArea
+                  value={unlockReason}
+                  onChange={(e) => setUnlockReason(e.target.value)}
+                  placeholder="Enter reason for unlocking this section..."
+                  rows={4}
+                  error={!unlockReason.trim() && unlockModalOpen}
+                  hint={!unlockReason.trim() ? "Reason is required" : ""}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={() => {
+                    setUnlockModalOpen(false);
+                    setSelectedSectionForUnlock(null);
+                    setUnlockReason('');
+                  }}
+                  disabled={isUnlocking}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleUnlockSubmit}
+                  disabled={!unlockReason.trim() || isUnlocking}
+                >
+                  {isUnlocking ? 'Unlocking...' : 'Unlock Section'}
+                </Button>
+              </div>
+            </div>
+          </Modal>
         </div>
       </div>
     );
@@ -550,7 +680,7 @@ export default function GradesPage() {
         </div>
 
         <div className="space-y-4">
-          {gradesData.map((gradeData) => {
+          {Array.isArray(gradesData) && gradesData.map((gradeData: ActiveGrade) => {
             const { course, currentGrade, assessments } = gradeData;
             const percentage = currentGrade?.percentage ?? 0;
             const letter = currentGrade?.letter ?? 'N/A';
@@ -628,7 +758,7 @@ export default function GradesPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        assessments.map((assessment) => {
+                        assessments.map((assessment: ActiveGrade['assessments'][0]) => {
                           const hasScore = assessment.score !== null;
                           const isOverdue = assessment.isMissing;
                           const rowClassName = isOverdue

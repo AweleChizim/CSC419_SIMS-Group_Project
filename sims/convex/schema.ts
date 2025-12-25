@@ -131,6 +131,7 @@ export default defineSchema({
     enrollmentDeadline: v.optional(v.number()), // Unix timestamp for enrollment deadline
     finalGradesPosted: v.optional(v.boolean()), // Whether final grades have been posted for this section
     gradesEditable: v.optional(v.boolean()), // Whether grades can be edited (default true, false when final grades posted, can be reopened by registrar)
+    isLocked: v.optional(v.boolean()), // Whether section is locked for grade editing (default false, set to true when term ends)
   })
     .index("by_courseId", ["courseId"])
     .index("by_termId", ["termId"])
@@ -374,6 +375,23 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_userId_read", ["userId", "read"])
     .index("by_createdAt", ["createdAt"]),
+
+  /**
+   * Grade Audit Log Collection
+   * Represents audit trail for grade unlocking/locking actions by Registrar
+   * Foreign Keys: adminId → users._id, sectionId → sections._id
+   */
+  grade_audit_log: defineTable({
+    adminId: v.id("users"), // Registrar/admin who performed the action
+    sectionId: v.id("sections"),
+    action: v.union(v.literal("UNLOCK"), v.literal("LOCK")), // Action type
+    reason: v.string(), // Mandatory reason for the action
+    timestamp: v.number(), // Unix timestamp
+  })
+    .index("by_sectionId", ["sectionId"])
+    .index("by_adminId", ["adminId"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_sectionId_timestamp", ["sectionId", "timestamp"]),
 
   /**
    * Settings Collection

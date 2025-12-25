@@ -120,7 +120,9 @@ export const getAllSectionsStatus = query({
 
         // Determine grade status
         let gradeStatus: "Grades Submitted" | "Pending" | "Locked";
-        if (section.finalGradesPosted && section.gradesEditable === false) {
+        if (section.isLocked === true) {
+          gradeStatus = "Locked";
+        } else if (section.finalGradesPosted && section.gradesEditable === false) {
           gradeStatus = "Locked";
         } else if (section.finalGradesPosted) {
           gradeStatus = "Grades Submitted";
@@ -144,6 +146,7 @@ export const getAllSectionsStatus = query({
           gradeStatus,
           finalGradesPosted: section.finalGradesPosted ?? false,
           gradesEditable: section.gradesEditable ?? true,
+          isLocked: section.isLocked ?? false,
         };
       })
     );
@@ -165,6 +168,7 @@ export const getAllSectionsStatus = query({
       gradeStatus: "Grades Submitted" | "Pending" | "Locked";
       finalGradesPosted: boolean;
       gradesEditable: boolean;
+      isLocked: boolean;
     }>;
   },
 });
@@ -234,6 +238,181 @@ export const sendReminder = mutation({
     });
 
     return { success: true };
+  },
+});
+
+/**
+ * Set section lock status (Registrar only)
+ * Inputs: sectionId, locked (boolean), reason (string)
+ * Logic:
+ * - Updates the section's isLocked status
+ * - If locking: sets enrollment status to "completed" and gradesEditable to false
+ * - If unlocking: sets isLocked to false and gradesEditable to true
+ * - Inserts a record into grade_audit_log
+ * - If unlocking, triggers a notification to the Instructor
+ */
+export const setSectionLock = mutation({
+  args: {
+    token: v.optional(v.string()),
+    sectionId: v.id("sections"),
+    locked: v.boolean(),
+    reason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Validate session token and get user
+    if (!args.token) {
+      throw new Error("Authentication required");
+    }
+
+    const userId = await validateSessionToken(ctx.db, args.token);
+    if (!userId) {
+      throw new Error("Invalid session token");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Verify role is registrar
+    if (!user.roles.includes("registrar")) {
+      throw new Error("Access denied: Registrar role required");
+    }
+
+    // Validate reason is not empty
+    if (!args.reason || args.reason.trim().length === 0) {
+      throw new Error("Reason is required for lock/unlock actions");
+    }
+
+    // Get section
+    const section = await ctx.db.get(args.sectionId);
+    if (!section) {
+      throw new Error("Section not found");
+    }
+
+    // Get course information for notifications
+    const course = await ctx.db.get(section.courseId);
+    if (!course) {
+      throw new Error("Course not found");
+    }
+
+    // Update section's isLocked status
+    await ctx.db.patch(args.sectionId, {
+      isLocked: args.locked,
+      gradesEditable: args.locked ? false : true, // Lock: disable editing, Unlock: enable editing
+    });
+
+    // Get all enrollments in this section
+    const enrollments = await ctx.db
+      .query("enrollments")
+      .withIndex("by_sectionId", (q) => q.eq("sectionId", args.sectionId))
+      .collect();
+
+    // Update enrollment status based on lock/unlock action
+    if (args.locked) {
+      // If locking, update all enrollments to "completed" status
+      for (const enrollment of enrollments) {
+        await ctx.db.patch(enrollment._id, {
+          status: "completed",
+        });
+      }
+    } else {
+      // If unlocking, update all enrollments back to "active" status
+      for (const enrollment of enrollments) {
+        await ctx.db.patch(enrollment._id, {
+          status: "active",
+        });
+      }
+    }
+
+    // Insert record into grade_audit_log
+    await ctx.db.insert("grade_audit_log", {
+      adminId: userId,
+      sectionId: args.sectionId,
+      action: args.locked ? "LOCK" : "UNLOCK",
+      reason: args.reason.trim(),
+      timestamp: Date.now(),
+    });
+
+    // If unlocking, trigger notification to instructor
+    if (!args.locked && section.instructorId) {
+      await ctx.db.insert("notifications", {
+        userId: section.instructorId,
+        message: `Section ${course.code} - ${course.title} has been unlocked for grading.`,
+        read: false,
+        createdAt: Date.now(),
+        courseId: course._id,
+      });
+    }
+
+    return { success: true, locked: args.locked };
+  },
+});
+
+/**
+ * Get grade audit log entries (Registrar only)
+ * Returns: List of all grade audit log entries with admin, section, and course information
+ */
+export const getGradeAuditLog = query({
+  args: {
+    token: v.optional(v.string()),
+    sectionId: v.optional(v.id("sections")), // Optional filter by section
+  },
+  handler: async (ctx, args) => {
+    // Validate session token and get user
+    if (!args.token) {
+      throw new Error("Authentication required");
+    }
+
+    const userId = await validateSessionToken(ctx.db, args.token);
+    if (!userId) {
+      throw new Error("Invalid session token");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Verify role is registrar
+    if (!user.roles.includes("registrar")) {
+      throw new Error("Access denied: Registrar role required");
+    }
+
+    // Get audit log entries
+    let auditLogs = await ctx.db.query("grade_audit_log").collect();
+
+    // Filter by section if provided
+    if (args.sectionId) {
+      auditLogs = auditLogs.filter((log) => log.sectionId === args.sectionId);
+    }
+
+    // Sort by timestamp (most recent first)
+    auditLogs.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Enrich with admin, section, and course information
+    const enrichedLogs = await Promise.all(
+      auditLogs.map(async (log) => {
+        const admin = await ctx.db.get(log.adminId);
+        const section = await ctx.db.get(log.sectionId);
+        const course = section ? await ctx.db.get(section.courseId) : null;
+
+        return {
+          _id: log._id,
+          adminId: log.adminId,
+          adminName: admin
+            ? `${admin.profile.firstName} ${admin.profile.lastName}`
+            : "Unknown",
+          sectionId: log.sectionId,
+          sectionName: section && course ? `${course.code} - ${course.title}` : "Unknown",
+          action: log.action,
+          reason: log.reason,
+          timestamp: log.timestamp,
+        };
+      })
+    );
+
+    return enrichedLogs;
   },
 });
 
