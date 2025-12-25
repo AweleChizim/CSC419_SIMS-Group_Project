@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
-import { useParams } from 'next/navigation';
 import { api } from '@/lib/convex';
 import { Id } from '@/lib/convex';
 import Button from '@/components/ui/button/Button';
@@ -560,7 +559,7 @@ export default function GradebookMatrix({ sectionId }: GradebookMatrixProps) {
           <strong>Warning:</strong> This action will:
           <ul className="mt-2 ml-4 list-disc">
             <li>Calculate final grades for all students based on current assessment grades</li>
-            <li>Mark all enrollments as "completed"</li>
+            <li>Mark all enrollments as &quot;completed&quot;</li>
             <li>Publish grades to student transcripts</li>
             <li>This action cannot be reversed</li>
           </ul>

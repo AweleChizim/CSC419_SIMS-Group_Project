@@ -7,7 +7,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { validateSessionToken } from "./lib/session";
-import { Id } from "./_generated/dataModel";
 
 /**
  * Get instructor dashboard data

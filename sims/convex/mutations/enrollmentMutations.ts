@@ -16,7 +16,6 @@ import {
   validateEnrollmentDomainChecks,
   checkPrerequisites,
   checkScheduleConflicts,
-  checkEnrollmentDeadline,
 } from "../lib/services/enrollmentService";
 import { logStudentEnrolled, logStudentDropped } from "../lib/services/auditLogService";
 import { validateSessionToken } from "../lib/session";

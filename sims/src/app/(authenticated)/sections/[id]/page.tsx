@@ -58,9 +58,8 @@ export default function SectionDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ variant: 'error' | 'success' | 'warning' | 'info'; title: string; message: string } | null>(null);
 
-  const deleteAssessmentMutation = useMutation(
-    (api as any)["mutations/assessmentMutations"].deleteAssessment
-  );
+  // @ts-expect-error - Convex API path with slashes
+  const deleteAssessmentMutation = useMutation(api["mutations/assessmentMutations"].deleteAssessment);
 
   // Initialize session token from localStorage
   const [sessionToken] = useState<string | null>(() => {
@@ -318,7 +317,7 @@ export default function SectionDetailPage() {
                   Delete Assessment
                 </h4>
                 <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
-                  Are you sure you want to delete "{selectedAssessment?.title}"? This action cannot be undone.
+                  Are you sure you want to delete &quot;{selectedAssessment?.title}&quot;? This action cannot be undone.
                 </p>
                 {selectedAssessment && (
                   <p className="mb-6 text-xs text-warning-600 dark:text-warning-400">

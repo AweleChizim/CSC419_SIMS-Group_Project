@@ -70,12 +70,11 @@ type ParsedRow = {
 };
 
 export default function BulkGradeUpload({
-  sectionId,
   gradebookData,
   onUploadComplete,
   onSaveGrades,
 }: BulkGradeUploadProps) {
-  const [file, setFile] = useState<File | null>(null);
+  const [, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);

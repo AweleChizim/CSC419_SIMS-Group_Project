@@ -131,7 +131,7 @@ export default function InstructorDashboard() {
                       variant="primary"
                       className="w-full"
                       onClick={(e) => {
-                        e.stopPropagation();
+                        e?.stopPropagation();
                         handleSectionClick(section._id);
                       }}
                     >

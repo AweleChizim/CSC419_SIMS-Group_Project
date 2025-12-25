@@ -43,6 +43,7 @@ export default function CreateAssessmentForm({
   const [weightWarning, setWeightWarning] = useState<string | null>(null);
   const [datePickerKey, setDatePickerKey] = useState(0);
 
+  // @ts-expect-error - Convex API path with slashes
   const createAssessmentMutation = useMutation(api["mutations/assessmentMutations"].createAssessment);
 
   // Get session token from localStorage
