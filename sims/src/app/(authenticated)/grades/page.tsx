@@ -14,6 +14,7 @@ import Accordion from '@/components/ui/accordion/Accordion';
 import Button from '@/components/ui/button/Button';
 import MetricCard from '@/components/common/MetricCard';
 import Select from '@/components/form/Select';
+import Input from '@/components/form/input/InputField';
 import { useHasRole } from '@/hooks/useHasRole';
 import { Modal } from '@/components/ui/modal';
 import TextArea from '@/components/form/input/TextArea';
@@ -111,6 +112,7 @@ export default function GradesPage() {
   // State for registrar view filters
   const [selectedTerm, setSelectedTerm] = useState<string>('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
 
   // Fetch active grades (for student view)
@@ -237,18 +239,36 @@ export default function GradesPage() {
     return 'warning';
   };
 
-  // Calculate overview stats for registrar view
-  const overviewStats = useMemo(() => {
+  // Filter sections by search query (client-side filtering)
+  const filteredSections = useMemo(() => {
     if (!Array.isArray(sectionsStatus)) {
+      return [];
+    }
+
+    if (!searchQuery.trim()) {
+      return sectionsStatus;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    return sectionsStatus.filter((section) => {
+      const courseCode = section.courseCode.toLowerCase();
+      const courseTitle = section.courseTitle.toLowerCase();
+      return courseCode.includes(query) || courseTitle.includes(query);
+    });
+  }, [sectionsStatus, searchQuery]);
+
+  // Calculate overview stats for registrar view (based on filtered sections)
+  const overviewStats = useMemo(() => {
+    if (!Array.isArray(filteredSections)) {
       return { totalSections: 0, gradesSubmitted: 0, pendingSubmission: 0 };
     }
 
-    const totalSections = sectionsStatus.length;
-    const gradesSubmitted = sectionsStatus.filter((s) => s.gradeStatus === "Grades Submitted").length;
-    const pendingSubmission = sectionsStatus.filter((s) => s.gradeStatus === "Pending").length;
+    const totalSections = filteredSections.length;
+    const gradesSubmitted = filteredSections.filter((s) => s.gradeStatus === "Grades Submitted").length;
+    const pendingSubmission = filteredSections.filter((s) => s.gradeStatus === "Pending").length;
 
     return { totalSections, gradesSubmitted, pendingSubmission };
-  }, [sectionsStatus]);
+  }, [filteredSections]);
 
   // Handle send reminder
   const handleSendReminder = async (sectionId: Id<"sections">, instructorId: Id<"users">) => {
@@ -403,40 +423,56 @@ export default function GradesPage() {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap gap-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-            <div className="flex-1 min-w-[200px]">
+          <div className="space-y-4">
+            {/* Search */}
+            <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
               <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Department
+                Search Courses
               </label>
-              <Select
-                options={[
-                  { value: '', label: 'All Departments' },
-                  ...(departments?.map((d) => ({
-                    value: d._id,
-                    label: d.name,
-                  })) || []),
-                ]}
-                placeholder="Select Department"
-                defaultValue={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
+              <Input
+                type="text"
+                placeholder="Search by course code or title..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex-1 min-w-[200px]">
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Term
-              </label>
-              <Select
-                options={[
-                  { value: '', label: 'All Terms' },
-                  ...(terms?.map((t) => ({
-                    value: t.name,
-                    label: `${t.name} (${t.sessionYearLabel})`,
-                  })) || []),
-                ]}
-                placeholder="Select Term"
-                defaultValue={selectedTerm}
-                onChange={(e) => setSelectedTerm(e.target.value)}
-              />
+
+            {/* Department and Term Filters */}
+            <div className="flex flex-wrap gap-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+              <div className="flex-1 min-w-[200px]">
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Department
+                </label>
+                <Select
+                  options={[
+                    { value: '', label: 'All Departments' },
+                    ...(departments?.map((d) => ({
+                      value: d._id,
+                      label: d.name,
+                    })) || []),
+                  ]}
+                  placeholder="Select Department"
+                  defaultValue={selectedDepartment}
+                  onChange={(e) => setSelectedDepartment(e.target.value)}
+                />
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Term
+                </label>
+                <Select
+                  options={[
+                    { value: '', label: 'All Terms' },
+                    ...(terms?.map((t) => ({
+                      value: t.name,
+                      label: `${t.name} (${t.sessionYearLabel})`,
+                    })) || []),
+                  ]}
+                  placeholder="Select Term"
+                  defaultValue={selectedTerm}
+                  onChange={(e) => setSelectedTerm(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
@@ -463,14 +499,14 @@ export default function GradesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {!hasData ? (
+                {filteredSections.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">
-                      No sections found.
+                      {searchQuery.trim() ? 'No sections found matching your search.' : 'No sections found.'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  (sectionsStatus as SectionStatus[]).map((section) => (
+                  filteredSections.map((section) => (
                     <TableRow key={section._id}>
                       <TableCell className="px-5 py-3">
                         <div>

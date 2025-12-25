@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/lib/convex';
 import { Id } from '@/../convex/_generated/dataModel';
@@ -45,6 +45,16 @@ export default function GradeAuditLogPage() {
   });
 
   const [selectedSection, setSelectedSection] = useState<string>('');
+  const [currentTime, setCurrentTime] = useState<number>(() => Date.now());
+
+  // Update current time periodically for "time ago" calculations
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch audit log entries
   const auditLogs = useQuery(
@@ -80,7 +90,7 @@ export default function GradeAuditLogPage() {
 
   // Format time ago
   const formatTimeAgo = (timestamp: number): string => {
-    const diff = Date.now() - timestamp;
+    const diff = currentTime - timestamp;
     const seconds = Math.floor(diff / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);

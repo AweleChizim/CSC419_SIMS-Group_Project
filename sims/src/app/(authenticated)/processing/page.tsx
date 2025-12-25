@@ -5,7 +5,6 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/lib/convex';
 import { Id } from '@/../convex/_generated/dataModel';
 import PageBreadCrumb from '@/components/common/PageBreadCrumb';
-import Loading from '@/components/loading/Loading';
 import Alert from '@/components/ui/alert/Alert';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import Select from '@/components/form/Select';
