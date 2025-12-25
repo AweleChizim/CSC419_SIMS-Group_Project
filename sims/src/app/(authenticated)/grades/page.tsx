@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useQuery } from 'convex/react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/convex';
 import PageBreadCrumb from '@/components/common/PageBreadCrumb';
 import Loading from '@/components/loading/Loading';
@@ -9,6 +10,7 @@ import Alert from '@/components/ui/alert/Alert';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import Badge from '@/components/ui/badge/Badge';
 import Accordion from '@/components/ui/accordion/Accordion';
+import Button from '@/components/ui/button/Button';
 
 type ActiveGrade = {
   enrollmentId: string;
@@ -41,6 +43,8 @@ type ActiveGrade = {
 };
 
 export default function GradesPage() {
+  const router = useRouter();
+  
   // Initialize session token from localStorage
   const [sessionToken] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -124,6 +128,16 @@ export default function GradesPage() {
       <PageBreadCrumb pageTitle="My Grades" />
 
       <div className="space-y-6">
+        {/* GPA Calculator Button */}
+        <div className="flex justify-end">
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => router.push('/grades/calculator')}
+          >
+            GPA Calculator
+          </Button>
+        </div>
 
         <div className="space-y-4">
           {gradesData.map((gradeData) => {
