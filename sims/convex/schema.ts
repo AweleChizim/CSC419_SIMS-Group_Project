@@ -171,6 +171,7 @@ export default defineSchema({
     departmentId: v.id("departments"),
     level: v.string(),
     status: v.string(),
+    academicStanding: v.optional(v.string()), // Academic standing: "First Class", "Second Class (Upper Division)", "Second Class (Lower Division)", "Third Class", "Probation"
   })
     .index("by_userId", ["userId"])
     .index("by_studentNumber", ["studentNumber"])

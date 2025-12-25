@@ -112,7 +112,12 @@ export default function GradeAuditLogPage() {
   if (!isRegistrar) {
     return (
       <div>
-        <PageBreadCrumb pageTitle="Grade Audit Log" />
+        <PageBreadCrumb 
+          items={[
+            { name: 'Grades', href: '/grades' },
+            { name: 'Grade Audit Log' },
+          ]}
+        />
         <div className="space-y-6">
           <Alert
             variant="error"
@@ -127,7 +132,12 @@ export default function GradeAuditLogPage() {
   if (isLoading) {
     return (
       <div>
-        <PageBreadCrumb pageTitle="Grade Audit Log" />
+        <PageBreadCrumb 
+          items={[
+            { name: 'Grades', href: '/grades' },
+            { name: 'Grade Audit Log' },
+          ]}
+        />
         <div className="flex items-center justify-center py-12">
           <Loading />
         </div>
@@ -139,7 +149,12 @@ export default function GradeAuditLogPage() {
     const errorMessage = auditLogs instanceof Error ? auditLogs.message : 'An error occurred while loading audit log.';
     return (
       <div>
-        <PageBreadCrumb pageTitle="Grade Audit Log" />
+        <PageBreadCrumb 
+          items={[
+            { name: 'Grades', href: '/grades' },
+            { name: 'Grade Audit Log' },
+          ]}
+        />
         <div className="space-y-6">
           <Alert
             variant="error"
@@ -161,7 +176,12 @@ export default function GradeAuditLogPage() {
 
   return (
     <div>
-      <PageBreadCrumb pageTitle="Grade Audit Log" />
+      <PageBreadCrumb 
+        items={[
+          { name: 'Grades', href: '/grades' },
+          { name: 'Grade Audit Log' },
+        ]}
+      />
 
       <div className="space-y-6">
         {/* Filter */}

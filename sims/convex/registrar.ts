@@ -9,6 +9,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { validateSessionToken } from "./lib/session";
 import { Id } from "./_generated/dataModel";
+import { computeFinalGrade } from "./lib/services/gradingService";
 
 /**
  * Get all sections with aggregated status for registrar grade dashboard
@@ -413,6 +414,235 @@ export const getGradeAuditLog = query({
     );
 
     return enrichedLogs;
+  },
+});
+
+/**
+ * Process term end: Calculate academic standing and lock sections
+ * Input: termId
+ * Logic:
+ * - Fetch all students active in the term
+ * - Calculate Term GPA for each student
+ * - Set academic standing based on GPA ranges
+ * - Lock all sections for that term
+ */
+export const processTermEnd = mutation({
+  args: {
+    token: v.optional(v.string()),
+    termId: v.id("terms"),
+  },
+  handler: async (ctx, args) => {
+    // Validate session token and get user
+    if (!args.token) {
+      throw new Error("Authentication required");
+    }
+
+    const userId = await validateSessionToken(ctx.db, args.token);
+    if (!userId) {
+      throw new Error("Invalid session token");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Verify role is registrar
+    if (!user.roles.includes("registrar")) {
+      throw new Error("Access denied: Registrar role required");
+    }
+
+    // Get term
+    const term = await ctx.db.get(args.termId);
+    if (!term) {
+      throw new Error("Term not found");
+    }
+
+    // Check that all sections in the term with enrollments have final grades posted
+    const allSections = await ctx.db
+      .query("sections")
+      .withIndex("by_termId", (q) => q.eq("termId", args.termId))
+      .collect();
+
+    // Check each section to see if it has enrollments and if grades are posted
+    const sectionsWithoutGrades: Array<{ section: typeof allSections[0]; courseName: string }> = [];
+    
+    for (const section of allSections) {
+      // Only check sections that have enrollments
+      if (section.enrollmentCount > 0 && !section.finalGradesPosted) {
+        const course = await ctx.db.get(section.courseId);
+        sectionsWithoutGrades.push({
+          section,
+          courseName: course ? `${course.code} - ${course.title}` : "Unknown Course",
+        });
+      }
+    }
+
+    if (sectionsWithoutGrades.length > 0) {
+      const sectionsInfo = sectionsWithoutGrades.map((s) => s.courseName);
+      throw new Error(
+        `Cannot process term end: ${sectionsWithoutGrades.length} section(s) with enrollments do not have final grades posted. ` +
+        `Please ensure all instructors have published final grades before processing. ` +
+        `Sections pending: ${sectionsInfo.join(", ")}`
+      );
+    }
+
+    // Get all enrollments for this term
+    const enrollments = await ctx.db
+      .query("enrollments")
+      .withIndex("by_termId", (q) => q.eq("termId", args.termId))
+      .collect();
+
+    // Get unique student IDs from enrollments
+    const studentIds = [...new Set(enrollments.map((e) => e.studentId))];
+
+    // Grade point mapping (using 5.0 scale as per enrollmentMutations.ts)
+    // This matches the scale used when final grades are posted
+    const getGradePoints = (letterGrade: string): number => {
+      switch (letterGrade.toUpperCase()) {
+        case "A":
+          return 5.0;
+        case "B":
+          return 4.0;
+        case "C":
+          return 3.0;
+        case "D":
+          return 2.0;
+        case "E":
+          return 1.0;
+        case "F":
+          return 0.0;
+        default:
+          return 0.0;
+      }
+    };
+
+    // Convert percentage to grade points (for when we need to compute from percentage)
+    // This matches the scale in enrollmentMutations.ts convertPercentageToFinalGrade
+    const percentageToGradePoints = (percentage: number): number => {
+      if (percentage >= 70) return 5.0;
+      if (percentage >= 60) return 4.0;
+      if (percentage >= 50) return 3.0;
+      if (percentage >= 45) return 2.0;
+      if (percentage >= 40) return 1.0;
+      return 0.0;
+    };
+
+    // Process each student
+    const standingCounts = {
+      "First Class": 0,
+      "Second Class (Upper Division)": 0,
+      "Second Class (Lower Division)": 0,
+      "Third Class": 0,
+      "Probation": 0,
+    };
+
+    for (const studentId of studentIds) {
+      // Get student record
+      const student = await ctx.db.get(studentId);
+      if (!student) {
+        continue;
+      }
+
+      // Get all enrollments for this student in this term
+      const studentEnrollments = enrollments.filter(
+        (e) => e.studentId === studentId && e.status === "completed"
+      );
+
+      if (studentEnrollments.length === 0) {
+        // If no completed enrollments, skip or set to default standing
+        continue;
+      }
+
+      // Calculate Term GPA
+      let totalGradePoints = 0;
+      let totalCredits = 0;
+
+      for (const enrollment of studentEnrollments) {
+        try {
+          // Get section and course to get credits
+          const section = await ctx.db.get(enrollment.sectionId);
+          if (!section) continue;
+
+          const course = await ctx.db.get(section.courseId);
+          if (!course) continue;
+
+          // Try to get grade from enrollment first (if already posted)
+          let gradePoints = 0;
+          if (enrollment.grade) {
+            // Use the posted grade (already in 5.0 scale from enrollmentMutations)
+            gradePoints = getGradePoints(enrollment.grade);
+          } else {
+            // Try to calculate final grade from assessments
+            try {
+              const { finalPercentage } = await computeFinalGrade(ctx.db, enrollment._id);
+              // Convert percentage to grade points using 5.0 scale
+              gradePoints = percentageToGradePoints(finalPercentage);
+            } catch {
+              // If final grade can't be calculated, skip this enrollment
+              continue;
+            }
+          }
+
+          // Only count courses with valid grades for GPA
+          if (gradePoints >= 0) {
+            totalGradePoints += gradePoints * course.credits;
+            totalCredits += course.credits;
+          }
+        } catch {
+          // Skip this enrollment if there's an error
+          continue;
+        }
+      }
+
+      // Calculate Term GPA
+      const termGPA = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
+      const roundedGPA = Math.round(termGPA * 100) / 100;
+
+      // Determine academic standing based on GPA
+      let academicStanding: string;
+      if (roundedGPA >= 4.5) {
+        academicStanding = "First Class";
+        standingCounts["First Class"]++;
+      } else if (roundedGPA >= 3.5 && roundedGPA < 4.49) {
+        academicStanding = "Second Class (Upper Division)";
+        standingCounts["Second Class (Upper Division)"]++;
+      } else if (roundedGPA >= 2.4 && roundedGPA < 3.49) {
+        academicStanding = "Second Class (Lower Division)";
+        standingCounts["Second Class (Lower Division)"]++;
+      } else if (roundedGPA >= 1.5 && roundedGPA < 2.39) {
+        academicStanding = "Third Class";
+        standingCounts["Third Class"]++;
+      } else {
+        academicStanding = "Probation";
+        standingCounts["Probation"]++;
+      }
+
+      // Update student record with academic standing
+      await ctx.db.patch(studentId, {
+        academicStanding,
+      });
+    }
+
+    // Lock all sections for this term
+    const sections = await ctx.db
+      .query("sections")
+      .withIndex("by_termId", (q) => q.eq("termId", args.termId))
+      .collect();
+
+    for (const section of sections) {
+      await ctx.db.patch(section._id, {
+        isLocked: true,
+        gradesEditable: false,
+      });
+    }
+
+    return {
+      success: true,
+      termName: term.name,
+      studentsProcessed: studentIds.length,
+      standingCounts,
+    };
   },
 });
 

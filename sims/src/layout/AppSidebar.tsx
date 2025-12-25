@@ -111,6 +111,11 @@ const AppSidebar: React.FC = () => {
             name: 'Grades',
             path: '/grades',
           },
+          {
+            icon: <FileIcon />,
+            name: 'Term Processing',
+            path: '/processing',
+          },
         ]
       : []),
   ], [userIsAdmin, userIsStudent, userIsDepartmentHead, userIsRegistrar]);
