@@ -51,6 +51,7 @@ import type * as mutations_transcriptMutations from "../mutations/transcriptMuta
 import type * as mutations_userMutations from "../mutations/userMutations.js";
 import type * as programs from "../programs.js";
 import type * as schools from "../schools.js";
+import type * as transcript from "../transcript.js";
 import type * as users from "../users.js";
 
 import type {
@@ -103,6 +104,7 @@ declare const fullApi: ApiFromModules<{
   "mutations/userMutations": typeof mutations_userMutations;
   programs: typeof programs;
   schools: typeof schools;
+  transcript: typeof transcript;
   users: typeof users;
 }>;
 
