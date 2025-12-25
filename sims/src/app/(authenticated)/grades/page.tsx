@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/convex';

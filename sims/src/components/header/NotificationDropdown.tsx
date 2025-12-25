@@ -1,10 +1,10 @@
 'use client';
-import Image from 'next/image';
 import Link from 'next/link';
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/convex';
+import { Id } from '@/../convex/_generated/dataModel';
 import { Dropdown } from '../ui/dropdown/Dropdown';
 import { DropdownItem } from '../ui/dropdown/DropdownItem';
 
@@ -60,8 +60,8 @@ export default function NotificationDropdown() {
 
   // Format time ago
   const formatTimeAgo = (timestamp: number): string => {
-    const now = Date.now();
-    const diff = now - timestamp;
+    // eslint-disable-next-line react-hooks/purity
+    const diff = Date.now() - timestamp;
     const seconds = Math.floor(diff / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
@@ -90,7 +90,7 @@ export default function NotificationDropdown() {
     if (!notification.read && sessionToken) {
       try {
         await markAsRead({
-          notificationId: notification._id as any,
+          notificationId: notification._id as Id<"notifications">,
           token: sessionToken,
         });
       } catch (error) {

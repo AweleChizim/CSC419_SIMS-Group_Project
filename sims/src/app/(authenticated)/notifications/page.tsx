@@ -6,9 +6,9 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/convex';
 import PageBreadCrumb from '@/components/common/PageBreadCrumb';
 import Loading from '@/components/loading/Loading';
-import Alert from '@/components/ui/alert/Alert';
 import Badge from '@/components/ui/badge/Badge';
 import Button from '@/components/ui/button/Button';
+import { Id } from '@/../convex/_generated/dataModel';
 
 type Notification = {
   _id: string;
@@ -67,8 +67,8 @@ export default function NotificationsPage() {
 
   // Format time ago
   const formatTimeAgo = (timestamp: number): string => {
-    const now = Date.now();
-    const diff = now - timestamp;
+    // eslint-disable-next-line react-hooks/purity
+    const diff = Date.now() - timestamp;
     const seconds = Math.floor(diff / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
@@ -108,7 +108,7 @@ export default function NotificationsPage() {
     if (!notification.read && sessionToken) {
       try {
         await markAsRead({
-          notificationId: notification._id as any,
+          notificationId: notification._id as Id<"notifications">,
           token: sessionToken,
         });
       } catch (error) {
@@ -131,7 +131,7 @@ export default function NotificationsPage() {
 
     const unreadIds = notifications
       .filter((n) => !n.read)
-      .map((n) => n._id as any);
+      .map((n) => n._id as Id<"notifications">);
 
     if (unreadIds.length > 0) {
       try {

@@ -101,7 +101,7 @@ export default function TranscriptPage() {
   }
 
   const { groupedData, termGPAs, cumulativeGPA, studentInfo } = transcriptData;
-  const termLabels = Object.keys(groupedData).sort((a, b) => {
+  const termLabels = Object.keys(groupedData).sort(() => {
     // Sort by term label (most recent first - already sorted in backend)
     return 0;
   });
@@ -191,7 +191,7 @@ export default function TranscriptPage() {
             }
           `}</style>
 
-          <ComponentCard>
+          <ComponentCard title="Official Transcript">
             {/* Screen View */}
             <div className="space-y-6">
               {/* Header */}

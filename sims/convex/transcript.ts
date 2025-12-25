@@ -8,30 +8,8 @@ import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { validateSessionToken } from "./lib/session";
 
-/**
- * Converts percentage to letter grade using the standard mapping:
- * 70-100: A (5.0)
- * 60-69.99: B (4.0)
- * 50-59.99: C (3.0)
- * 45-49.99: D (2.0)
- * 40-44.99: E (1.0)
- * 0-39.99: F (0.0)
- */
-function convertPercentageToLetterGrade(percentage: number): { letter: string; points: number } {
-  if (percentage >= 70) {
-    return { letter: "A", points: 5.0 };
-  } else if (percentage >= 60) {
-    return { letter: "B", points: 4.0 };
-  } else if (percentage >= 50) {
-    return { letter: "C", points: 3.0 };
-  } else if (percentage >= 45) {
-    return { letter: "D", points: 2.0 };
-  } else if (percentage >= 40) {
-    return { letter: "E", points: 1.0 };
-  } else {
-    return { letter: "F", points: 0.0 };
-  }
-}
+// Note: convertPercentageToLetterGrade function removed as it's unused
+// If needed in the future, it can be re-added
 
 /**
  * Calculate GPA from course entries
@@ -164,7 +142,7 @@ export const getFullHistory = query({
       };
     }>> = {};
 
-    let allCourses: Array<{ credits: number; gradePoints: number }> = [];
+    const allCourses: Array<{ credits: number; gradePoints: number }> = [];
     const termGPAs: Record<string, number> = {};
 
     for (const [termLabel, entries] of sortedTerms) {
