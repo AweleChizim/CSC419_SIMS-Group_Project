@@ -10,6 +10,7 @@ type Props = {
   width?: number;
   height?: number;
   onNodeClick?: (code: string) => void; // optional click handler to navigate to course details
+  onRetry?: () => void; // optional retry callback
   // Optional validation result with a cycle to highlight
   validation?: { valid: true } | { valid: false; cycle?: string[]; reason?: string };
 };
@@ -186,7 +187,16 @@ export default function PrerequisitesGraph({
   };
 
   if (!start) {
-    return <div>No graph data</div>;
+    return (
+      <div className="py-6 text-center text-gray-500">
+        <p className="mb-2">No prerequisites found for this course.</p>
+        {typeof onRetry === 'function' ? (
+          <div className="mt-2">
+            <button className="text-sm text-gray-500" onClick={onRetry}>Retry</button>
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   return (

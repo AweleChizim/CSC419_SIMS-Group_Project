@@ -27,7 +27,7 @@ export default function CourseVersionComparison({ versionA, versionB }: Props) {
   if (!versionA || !versionB) {
     return (
       <div className="py-6 text-sm text-gray-500 dark:text-gray-400">
-        Select two versions to compare.
+        Select two versions above to compare changes. Tip: pick the current version and a previous one to see what's changed.
       </div>
     );
   }

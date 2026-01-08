@@ -15,8 +15,6 @@ import Alert from '@/components/ui/alert/Alert';
 import { Modal } from '@/components/ui/modal';
 import Link from 'next/link';
 import PrerequisitesGraph from '../_components/PrerequisitesGraph';
-import Loading from '@/components/loading/Loading';
-import Alert from '@/components/ui/alert/Alert';
 import AffectedCoursesWarning from '../_components/AffectedCoursesWarning';
 
 type CourseDetails = {
@@ -33,6 +31,7 @@ type CourseDetails = {
 };
 
 function PrerequisitesSection({ courseId }: { courseId: Id<'courses'> }) {
+  const [tick, setTick] = useState(0);
   const graphRes = useQuery(api.functions.courses.getPrerequisitesGraph, courseId ? { courseId } : 'skip');
   const loading = graphRes === undefined;
   const graph = graphRes?.graph ?? {};
@@ -75,19 +74,28 @@ function PrerequisitesSection({ courseId }: { courseId: Id<'courses'> }) {
             </div>
           ) : null}
 
-          <PrerequisitesGraph
-            graph={graph}
-            root={root ?? undefined}
-            width={700}
-            height={300}
-            validation={validation}
-            onNodeClick={(code) => window.location.href = `/courses?searchQuery=${encodeURIComponent(code)}`}
-          />
+          {Object.keys(graph).length === 0 ? (
+            <div className="py-6 text-center text-gray-500">
+              <p className="mb-2">This course does not have any prerequisites.</p>
+              <div className="mt-2">
+                <button className="text-sm text-gray-500" onClick={() => setTick((t) => t + 1)}>Retry</button>
+              </div>
+            </div>
+          ) : (
+            <PrerequisitesGraph
+              graph={graph}
+              root={root ?? undefined}
+              width={700}
+              height={300}
+              validation={validation}
+              onNodeClick={(code) => window.location.href = `/courses?searchQuery=${encodeURIComponent(code)}`}
+            />
+          )}
 
           <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
             <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Prerequisite chains</div>
             {chains.length === 0 ? (
-              <div className="text-gray-500">No chains available</div>
+              <div className="text-gray-500">This course has no prerequisite chains.</div>
             ) : (
               <ul className="list-disc list-inside space-y-1">
                 {chains.map((chain, idx) => (

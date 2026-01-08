@@ -18,8 +18,6 @@ export default function CourseVersionsPage() {
   const params = useParams();
   const courseId = params.courseId;
 
-  const versions = useQuery(api.functions.courses.getVersions, courseId ? { courseId } : 'skip');
-
   const breadcrumbItems = [
     { name: 'Course', href: '/courses' },
     { name: 'Versions' }
@@ -27,91 +25,112 @@ export default function CourseVersionsPage() {
 
   const [leftVersionId, setLeftVersionId] = React.useState<string | null>(null);
   const [rightVersionId, setRightVersionId] = React.useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = React.useState(0);
 
-  if (versions === undefined) {
-    return (
-      <div>
-        <PageBreadCrumb items={breadcrumbItems} />
+  function handleRetry() {
+    // Remount inner query block to re-run Convex queries
+    setRefreshKey((k) => k + 1);
+  }
+
+  const VersionBlock: React.FC<{ keyId: number }> = ({ keyId }) => {
+    // Keyed component to allow remount/retry
+    const versions = useQuery(api.functions.courses.getVersions, courseId ? { courseId } : 'skip');
+    const graphRes = useQuery(api.functions.courses.getPrerequisitesGraph, courseId ? { courseId } : 'skip');
+
+    if (versions === undefined || graphRes === undefined) {
+      return (
         <div className="py-12 flex items-center justify-center">
           <Loading />
         </div>
-      </div>
+      );
+    }
+
+    const versionOptions = (versions || []).map((v: any) => ({ id: v._id, label: `v${v.version} — ${v.title}` }));
+    const left = versions?.find((v: any) => v._id === leftVersionId) ?? null;
+    const right = versions?.find((v: any) => v._id === rightVersionId) ?? null;
+
+    const graph = graphRes?.graph ?? {};
+    const validation = graphRes?.validation ?? { valid: true };
+
+    return (
+      <>
+        <div className="mb-6 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-500">Left</label>
+            <select
+              className="border px-3 py-2 rounded"
+              value={leftVersionId ?? ''}
+              onChange={(e) => setLeftVersionId(e.target.value || null)}
+            >
+              <option value="">Select version</option>
+              {versionOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-500">Right</label>
+            <select
+              className="border px-3 py-2 rounded"
+              value={rightVersionId ?? ''}
+              onChange={(e) => setRightVersionId(e.target.value || null)}
+            >
+              <option value="">Select version</option>
+              {versionOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="ml-auto text-sm text-gray-500">Select two versions to compare changes.</div>
+
+          <div>
+            <button className="text-sm text-gray-500" onClick={() => handleRetry()}>Refresh</button>
+          </div>
+        </div>
+
+        <ComponentCard title="Course Versions">
+          <CourseVersionHistory versions={versions || []} isLoading={false} error={null} onRetry={() => handleRetry()} />
+
+          <div className="mt-6">
+            <ComponentCard title="Compare Versions">
+              <CourseVersionComparison versionA={left} versionB={right} />
+            </ComponentCard>
+          </div>
+
+          <div className="mt-6">
+            <ComponentCard title="Prerequisites Graph">
+              {validation && !validation.valid ? (
+                <div className="mb-4">
+                  <Alert variant="error" title="Circular prerequisite detected" message={validation.cycle ? `Cycle: ${validation.cycle.join(' -> ')}` : (validation.reason || 'Invalid prerequisite chain')} />
+                </div>
+              ) : null}
+
+              {Object.keys(graph).length === 0 ? (
+                <div className="py-6 text-center text-gray-500">No prerequisites found for this course.</div>
+              ) : (
+                <PrerequisitesGraph
+                  graph={graph}
+                  root={undefined}
+                  width={800}
+                  height={360}
+                  validation={validation}
+                  onNodeClick={(code) => window.location.href = `/courses?searchQuery=${encodeURIComponent(code)}`}
+                />
+              )}
+            </ComponentCard>
+          </div>
+        </ComponentCard>
+      </>
     );
-  }
-
-  const versionOptions = (versions || []).map((v: any) => ({ id: v._id, label: `v${v.version} — ${v.title}` }));
-
-  const left = versions?.find((v: any) => v._id === leftVersionId) ?? null;
-  const right = versions?.find((v: any) => v._id === rightVersionId) ?? null;
-
-  const graphRes = useQuery(api.functions.courses.getPrerequisitesGraph, courseId ? { courseId } : 'skip');
-  const graph = graphRes?.graph ?? {};
-  const validation = graphRes?.validation ?? { valid: true };
+  };
 
   return (
     <div>
       <PageBreadCrumb items={breadcrumbItems} />
 
-      <div className="mb-6 flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500">Left</label>
-          <select
-            className="border px-3 py-2 rounded"
-            value={leftVersionId ?? ''}
-            onChange={(e) => setLeftVersionId(e.target.value || null)}
-          >
-            <option value="">Select version</option>
-            {versionOptions.map((opt) => (
-              <option key={opt.id} value={opt.id}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500">Right</label>
-          <select
-            className="border px-3 py-2 rounded"
-            value={rightVersionId ?? ''}
-            onChange={(e) => setRightVersionId(e.target.value || null)}
-          >
-            <option value="">Select version</option>
-            {versionOptions.map((opt) => (
-              <option key={opt.id} value={opt.id}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="ml-auto text-sm text-gray-500">Choose two versions to compare.</div>
-      </div>
-
-      <ComponentCard title="Course Versions">
-        <CourseVersionHistory versions={versions || []} />
-
-        <div className="mt-6">
-          <ComponentCard title="Compare Versions">
-            <CourseVersionComparison versionA={left} versionB={right} />
-          </ComponentCard>
-        </div>
-
-        <div className="mt-6">
-          <ComponentCard title="Prerequisites Graph">
-            {validation && !validation.valid ? (
-              <div className="mb-4">
-                <Alert variant="error" title="Circular prerequisite detected" message={validation.cycle ? `Cycle: ${validation.cycle.join(' -> ')}` : (validation.reason || 'Invalid prerequisite chain')} />
-              </div>
-            ) : null}
-
-            <PrerequisitesGraph
-              graph={graph}
-              root={undefined}
-              width={800}
-              height={360}
-              validation={validation}
-              onNodeClick={(code) => window.location.href = `/courses?searchQuery=${encodeURIComponent(code)}`}
-            />
-          </ComponentCard>
-        </div>
-      </ComponentCard>
+      <VersionBlock key={refreshKey} keyId={refreshKey} />
     </div>
   );
 }
