@@ -15,7 +15,6 @@ import Alert from '@/components/ui/alert/Alert';
 import { Modal } from '@/components/ui/modal';
 import Link from 'next/link';
 import PrerequisitesGraph from '../_components/PrerequisitesGraph';
-import AffectedCoursesWarning from '../_components/AffectedCoursesWarning';
 
 type CourseDetails = {
   title: string;
@@ -31,7 +30,7 @@ type CourseDetails = {
 };
 
 function PrerequisitesSection({ courseId }: { courseId: Id<'courses'> }) {
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   const graphRes = useQuery(api.functions.courses.getPrerequisitesGraph, courseId ? { courseId } : 'skip');
   const loading = graphRes === undefined;
   const graph = graphRes?.graph ?? {};
@@ -129,12 +128,8 @@ export default function CourseDetailPage() {
     return null;
   });
 
-  // Fetch prerequisites graph and validation
-  const graphRes = useQuery(api.functions.courses.getPrerequisitesGraph, courseId ? { courseId } : 'skip');
-  const graphLoading = graphRes === undefined;
-  const graph = graphRes?.graph ?? {};
-  const graphValidation = graphRes?.validation ?? { valid: true };
-  const graphRoot = graphRes?.root ?? null;
+  // Fetch prerequisites graph and validation (unused but kept for potential future use)
+  // const graphRes = useQuery(api.functions.courses.getPrerequisitesGraph, courseId ? { courseId } : 'skip');
 
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);

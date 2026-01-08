@@ -3,20 +3,18 @@
 import React from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery } from 'convex/react';
-import { api } from '@/lib/convex';
+import { api, Id } from '@/lib/convex';
 import PageBreadCrumb from '@/components/common/PageBreadCrumb';
 import ComponentCard from '@/components/common/ComponentCard';
 import Loading from '@/components/loading/Loading';
-import CourseVersionHistory from '../_components/CourseVersionHistory';
-import CourseVersionComparison from '../_components/CourseVersionComparison';
-import PrerequisitesGraph from '../_components/PrerequisitesGraph';
-import { Table, TableHeader, TableBody, TableRow, TableCell } from '@/components/ui/table';
-import Badge from '@/components/ui/badge/Badge';
+import CourseVersionHistory, { type CourseVersion } from '../../_components/CourseVersionHistory';
+import CourseVersionComparison from '../../_components/CourseVersionComparison';
+import PrerequisitesGraph from '../../_components/PrerequisitesGraph';
 import Alert from '@/components/ui/alert/Alert';
 
 export default function CourseVersionsPage() {
   const params = useParams();
-  const courseId = params.courseId;
+  const courseId = (Array.isArray(params.courseId) ? params.courseId[0] : params.courseId) as Id<'courses'> | undefined;
 
   const breadcrumbItems = [
     { name: 'Course', href: '/courses' },
@@ -32,10 +30,10 @@ export default function CourseVersionsPage() {
     setRefreshKey((k) => k + 1);
   }
 
-  const VersionBlock: React.FC<{ keyId: number }> = ({ keyId }) => {
+  const VersionBlock: React.FC<{ keyId: number }> = () => {
     // Keyed component to allow remount/retry
-    const versions = useQuery(api.functions.courses.getVersions, courseId ? { courseId } : 'skip');
-    const graphRes = useQuery(api.functions.courses.getPrerequisitesGraph, courseId ? { courseId } : 'skip');
+    const versions = useQuery(api.functions.courses.getVersions, courseId ? { courseId: courseId as Id<'courses'> } : 'skip');
+    const graphRes = useQuery(api.functions.courses.getPrerequisitesGraph, courseId ? { courseId: courseId as Id<'courses'> } : 'skip');
 
     if (versions === undefined || graphRes === undefined) {
       return (
@@ -45,9 +43,9 @@ export default function CourseVersionsPage() {
       );
     }
 
-    const versionOptions = (versions || []).map((v: any) => ({ id: v._id, label: `v${v.version} — ${v.title}` }));
-    const left = versions?.find((v: any) => v._id === leftVersionId) ?? null;
-    const right = versions?.find((v: any) => v._id === rightVersionId) ?? null;
+    const versionOptions = (versions || []).map((v: CourseVersion) => ({ id: v._id, label: `v${v.version} — ${v.title}` }));
+    const left = versions?.find((v: CourseVersion) => v._id === leftVersionId) ?? null;
+    const right = versions?.find((v: CourseVersion) => v._id === rightVersionId) ?? null;
 
     const graph = graphRes?.graph ?? {};
     const validation = graphRes?.validation ?? { valid: true };
@@ -116,7 +114,7 @@ export default function CourseVersionsPage() {
                   width={800}
                   height={360}
                   validation={validation}
-                  onNodeClick={(code) => window.location.href = `/courses?searchQuery=${encodeURIComponent(code)}`}
+                  onNodeClick={(code: string) => window.location.href = `/courses?searchQuery=${encodeURIComponent(code)}`}
                 />
               )}
             </ComponentCard>

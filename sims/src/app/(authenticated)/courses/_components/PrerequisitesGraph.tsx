@@ -21,6 +21,8 @@ export default function PrerequisitesGraph({
   width = 800,
   height = 400,
   onNodeClick,
+  onRetry,
+  validation,
 }: Props) {
   const nodes = React.useMemo(() => {
     // ensure we include isolated nodes and all referenced prereqs
@@ -36,8 +38,8 @@ export default function PrerequisitesGraph({
     if (root && nodes.includes(root)) return root;
     // choose a node with no incoming edges if possible
     const incoming = new Map<string, number>();
-    for (const n of nodes) incoming.set(n, 0);
-    for (const [n, preds] of Object.entries(graph)) {
+    for (const node of nodes) incoming.set(node, 0);
+    for (const [, preds] of Object.entries(graph)) {
       for (const p of preds || []) incoming.set(p, (incoming.get(p) ?? 0) + 1);
     }
     const roots = nodes.filter((n) => (incoming.get(n) ?? 0) === 0);
@@ -104,9 +106,9 @@ export default function PrerequisitesGraph({
 
   // simple helper to draw an arrowed path
   const renderEdges = () => {
-    const edges: JSX.Element[] = [];
+    const edges: React.ReactElement[] = [];
 
-    const cycleSet = new Set<string>((props.validation && (props.validation as any).cycle) || []);
+    const cycleSet = new Set<string>((validation && !validation.valid && validation.cycle) || []);
     const cycleEdges = new Set<string>();
     if (cycleSet.size > 0) {
       const cycleArr = Array.from(cycleSet);
@@ -144,10 +146,10 @@ export default function PrerequisitesGraph({
   };
 
   const renderNodes = () => {
-    const elems: JSX.Element[] = [];
+    const elems: React.ReactElement[] = [];
 
-    const cycleArr = (props.validation && (props.validation as any).cycle) || [];
-    const cycleSet = new Set<string>(cycleArr as string[]);
+    const cycleArr = (validation && !validation.valid && validation.cycle) || [];
+    const cycleSet = new Set<string>(cycleArr);
 
     for (const n of nodes) {
       const pos = layout.get(n);

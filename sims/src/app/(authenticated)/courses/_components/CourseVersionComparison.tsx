@@ -1,8 +1,6 @@
 'use client';
 
 import React from 'react';
-import Badge from '@/components/ui/badge/Badge';
-import Button from '@/components/ui/button/Button';
 import type { CourseVersion } from './CourseVersionHistory';
 
 type Props = {
@@ -10,24 +8,11 @@ type Props = {
   versionB: CourseVersion | null;
 };
 
-function renderPrereqList(list: string[] | undefined) {
-  if (!list || list.length === 0) return <span className="text-gray-500">None</span>;
-  return (
-    <ul className="list-disc list-inside space-y-1">
-      {list.map((p) => (
-        <li key={p} className="text-gray-800 dark:text-white/90">
-          {p}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 export default function CourseVersionComparison({ versionA, versionB }: Props) {
   if (!versionA || !versionB) {
     return (
       <div className="py-6 text-sm text-gray-500 dark:text-gray-400">
-        Select two versions above to compare changes. Tip: pick the current version and a previous one to see what's changed.
+        Select two versions above to compare changes. Tip: pick the current version and a previous one to see what&apos;s changed.
       </div>
     );
   }

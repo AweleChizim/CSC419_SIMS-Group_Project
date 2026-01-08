@@ -3,6 +3,7 @@
 import React from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/lib/convex';
+import { Id } from '@/lib/convex';
 import Alert from '@/components/ui/alert/Alert';
 import Button from '@/components/ui/button/Button';
 
@@ -23,10 +24,10 @@ type Props = {
 export default function AffectedCoursesWarning({ courseId, candidateCode, candidatePrerequisites, onConfirm }: Props) {
   const [tick, setTick] = React.useState(0);
 
-  const args = { courseId: courseId as any, candidateCode, candidatePrerequisites };
+  const args = { courseId: courseId as Id<'courses'>, candidateCode, candidatePrerequisites };
 
   const Inner: React.FC = () => {
-    const dependents = useQuery(api.functions.courses.getDependentCourses, args as any);
+    const dependents = useQuery(api.functions.courses.getDependentCourses, args);
 
     if (dependents === undefined) {
       return (

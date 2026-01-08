@@ -350,10 +350,8 @@ export const getDependentCourses = query({
       throw new Error("Course not found");
     }
 
-    const targetCode = (args.candidateCode && args.candidateCode.trim()) || course.code;
-
     // If candidatePrerequisites provided, we should also consider their effect on other courses
-    // For now, dependent courses are those whose prerequisites include the targetCode
+    // For now, dependent courses are those whose prerequisites include the candidateCode or course.code
 
     // Delegate to service to reuse logic
     const dependents = await courseCatalogService.getDependentCourses(ctx.db, args.courseId, args.candidateCode);

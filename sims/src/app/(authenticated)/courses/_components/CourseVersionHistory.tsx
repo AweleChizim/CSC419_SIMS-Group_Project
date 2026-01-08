@@ -53,7 +53,10 @@ export default function CourseVersionHistory({ versions, isLoading, error, onRet
         <p className="text-lg font-medium mb-2">No versions yet</p>
         <p className="text-sm">There are no saved versions for this course. Create the first version from the admin interface or contact your department administrator.</p>
         <div className="mt-4 flex items-center justify-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => (window.location.href = `/admin/courses/${(window as any).courseId || ''}/versions/new`)}>Create first version</Button>
+          <Button size="sm" variant="outline" onClick={() => {
+            const courseId = typeof window !== 'undefined' ? (window as { courseId?: string }).courseId || '' : '';
+            window.location.href = `/admin/courses/${courseId}/versions/new`;
+          }}>Create first version</Button>
           <Button size="sm" variant="text-only" onClick={() => onRetry && onRetry()}>Retry</Button>
         </div>
       </div>

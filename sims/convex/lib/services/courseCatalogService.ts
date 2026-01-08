@@ -7,7 +7,7 @@
  */
 
 import { DatabaseReader, DatabaseWriter } from "../../_generated/server";
-import { Id } from "../../_generated/dataModel";
+import { Id, Doc } from "../../_generated/dataModel";
 import { NotFoundError } from "../errors";
 
 export type CourseVersionPayload = {
@@ -68,7 +68,7 @@ export const courseCatalogService = {
   async getCourseVersions(
     db: DatabaseReader,
     courseId: Id<"courses">
-  ): Promise<any[]> {
+  ): Promise<Doc<"courseVersions">[]> {
     const versions = await db
       .query("courseVersions")
       .withIndex("by_courseId", (q) => q.eq("courseId", courseId))
@@ -81,11 +81,11 @@ export const courseCatalogService = {
   async getCurrentCourseVersion(
     db: DatabaseReader,
     courseId: Id<"courses">
-  ): Promise<any | null> {
+  ): Promise<Doc<"courseVersions"> | null> {
     // Try compound index first
     let current = await db
       .query("courseVersions")
-      .withIndex("by_courseId_isActive", (q) => q.eq("courseId", courseId).and(q.eq("isActive", true)))
+      .withIndex("by_courseId_isActive", (q) => q.eq("courseId", courseId).eq("isActive", true))
       .first();
 
     if (!current) {
@@ -198,7 +198,7 @@ export const courseCatalogService = {
     const startCode: string = course.code;
 
     // Build adjacency using the existing graph builder
-    const adjacency = await (courseCatalogService as any).getPrerequisitesGraph(db, courseId);
+    const adjacency = await courseCatalogService.getPrerequisitesGraph(db, courseId);
 
     const visited = new Set<string>();
     const stack = new Set<string>();
@@ -255,9 +255,11 @@ export const courseCatalogService = {
   },
 
   async getOfferingTemplates(
-    db: DatabaseReader,
-    courseId: Id<"courses">
-  ): Promise<any[]> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _db: DatabaseReader,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _courseId: Id<"courses">
+  ): Promise<unknown[]> {
     // TODO: return offering templates derived from current course version
     throw new Error("Not implemented: getOfferingTemplates");
   },
