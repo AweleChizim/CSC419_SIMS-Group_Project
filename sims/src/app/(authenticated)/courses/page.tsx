@@ -5,7 +5,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { isStudent, isDepartmentHead } from '@/services/permissions.service';
 import StudentCoursesPage from './_components/StudentCoursesPage';
 import DepartmentHeadCoursesPage from './_components/DepartmentHeadCoursesPage';
-import { RoleGuard } from '@/components/auth/RoleGuard';
 
 export default function CoursesPage() {
   const { user } = useAuth();

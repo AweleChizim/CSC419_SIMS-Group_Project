@@ -2,27 +2,27 @@
 
 import React, { useState } from 'react';
 import { useQuery } from 'convex/react';
-import { api } from '@/lib/convex';
+import { api, Id } from '@/lib/convex';
 import PageBreadCrumb from '@/components/common/PageBreadCrumb';
 import ComponentCard from '@/components/common/ComponentCard';
 import Input from '@/components/form/input/InputField';
 import CoursesTable from './CoursesTable';
 
 type Course = {
-  _id: string;
+  _id: Id<'courses'>;
   code: string;
   title: string;
   credits: number;
-  department: {
-    _id: string;
+  department?: {
+    _id: Id<'departments'>;
     name: string;
   } | null;
-  programs: Array<{
-    _id: string;
+  programs?: Array<{
+    _id: Id<'programs'>;
     name: string;
   }>;
-  status: string;
-  level: string;
+  status?: string;
+  level?: string;
 };
 
 export default function StudentCoursesPage() {
