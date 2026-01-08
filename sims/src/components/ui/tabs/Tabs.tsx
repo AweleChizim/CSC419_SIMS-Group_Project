@@ -78,8 +78,10 @@ export default function Tabs({
   );
 
   // Ensure activeStep is within bounds
-  const safeActiveStep = Math.max(0, Math.min(activeStep, validChildren.length - 1));
-  const activeChild = validChildren[safeActiveStep];
+  const safeActiveStep = validChildren.length > 0 
+    ? Math.max(0, Math.min(activeStep, validChildren.length - 1))
+    : 0;
+  const activeChild = validChildren.length > 0 ? validChildren[safeActiveStep] : null;
 
   return (
     <TabsContext.Provider
