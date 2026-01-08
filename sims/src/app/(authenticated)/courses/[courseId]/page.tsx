@@ -13,6 +13,7 @@ import Button from '@/components/ui/button/Button';
 import Badge from '@/components/ui/badge/Badge';
 import Alert from '@/components/ui/alert/Alert';
 import { Modal } from '@/components/ui/modal';
+import Link from 'next/link';
 
 type CourseDetails = {
   title: string;
@@ -213,6 +214,13 @@ export default function CourseDetailPage() {
               ) : (
                 <p className="text-gray-500 dark:text-gray-400">No prerequisites</p>
               )}
+            </div>
+
+            {/* Link to versions page */}
+            <div>
+              <Link href={`/courses/${courseId}/versions`}>
+                <Button size="sm" variant="outline">View Versions</Button>
+              </Link>
             </div>
           </div>
         </ComponentCard>

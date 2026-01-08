@@ -294,3 +294,27 @@ export const getDetails = query({
   },
 });
 
+export const getVersions = query({
+  args: { courseId: v.id("courses") },
+  handler: async (ctx, args) => {
+    const versions = await ctx.db
+      .query("courseVersions")
+      .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+      .collect();
+
+    const mapped = versions.map((v) => ({
+      _id: v._id,
+      version: v.version,
+      title: v.title,
+      description: v.description,
+      credits: v.credits,
+      prerequisites: v.prerequisites || [],
+      isActive: v.isActive,
+      createdAt: v.createdAt,
+    }));
+
+    // Sort by version descending (latest first)
+    return mapped.sort((a, b) => (b.version ?? 0) - (a.version ?? 0));
+  },
+});
+
