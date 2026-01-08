@@ -261,4 +261,31 @@ export const courseCatalogService = {
     // TODO: return offering templates derived from current course version
     throw new Error("Not implemented: getOfferingTemplates");
   },
+
+  async getDependentCourses(
+    db: DatabaseReader,
+    courseId: Id<"courses">,
+    candidateCode?: string
+  ): Promise<Array<{ _id: string; code: string; title: string; matched: string[] }>> {
+    const course = await db.get(courseId);
+    if (!course) {
+      throw new NotFoundError("Course", courseId as unknown as string);
+    }
+
+    const targetCode = (candidateCode && candidateCode.trim()) || course.code;
+
+    const allCourses = await db.query("courses").collect();
+
+    const dependents = allCourses
+      .filter((c) => c._id !== courseId && Array.isArray(c.prerequisites))
+      .map((c) => {
+        const matched = c.prerequisites.filter(
+          (p: string) => p.trim().toLowerCase() === targetCode.trim().toLowerCase()
+        );
+        return { _id: c._id, code: c.code, title: c.title, matched };
+      })
+      .filter((c) => c.matched.length > 0);
+
+    return dependents;
+  },
 };

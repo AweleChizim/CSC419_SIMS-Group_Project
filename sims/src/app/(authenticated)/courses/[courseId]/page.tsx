@@ -17,6 +17,7 @@ import Link from 'next/link';
 import PrerequisitesGraph from '../_components/PrerequisitesGraph';
 import Loading from '@/components/loading/Loading';
 import Alert from '@/components/ui/alert/Alert';
+import AffectedCoursesWarning from '../_components/AffectedCoursesWarning';
 
 type CourseDetails = {
   title: string;

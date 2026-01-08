@@ -338,3 +338,26 @@ export const getPrerequisitesGraph = query({
   },
 });
 
+export const getDependentCourses = query({
+  args: {
+    courseId: v.id("courses"),
+    candidateCode: v.optional(v.string()),
+    candidatePrerequisites: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const course = await ctx.db.get(args.courseId);
+    if (!course) {
+      throw new Error("Course not found");
+    }
+
+    const targetCode = (args.candidateCode && args.candidateCode.trim()) || course.code;
+
+    // If candidatePrerequisites provided, we should also consider their effect on other courses
+    // For now, dependent courses are those whose prerequisites include the targetCode
+
+    // Delegate to service to reuse logic
+    const dependents = await courseCatalogService.getDependentCourses(ctx.db, args.courseId, args.candidateCode);
+    return dependents;
+  },
+});
+
