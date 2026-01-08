@@ -9,6 +9,7 @@ import { v } from "convex/values";
 import { Id } from "../_generated/dataModel";
 import { validateCreateCourse, validateUpdateCourse, NotFoundError, validateCourseStatus, isRequiredCourse } from "../lib/aggregates";
 import { logCourseCreated, logCourseUpdated } from "../lib/services/auditLogService";
+import { courseCatalogService } from "../lib/services";
 
 /**
  * Create a new course
@@ -63,6 +64,17 @@ export const createCourse = mutation({
       status: courseStatus,
       level: args.level,
     });
+
+    // Validate prerequisite chains for the newly created course
+    const createValidation = await courseCatalogService.validatePrerequisiteChain(ctx.db, courseId);
+    if (!createValidation.valid) {
+      // Roll back the created course if validation fails
+      await ctx.db.delete(courseId);
+      if (createValidation.cycle) {
+        throw new Error(`Circular prerequisite detected: ${createValidation.cycle.join(" -> ")}`);
+      }
+      throw new Error(createValidation.reason || "Invalid prerequisite chain");
+    }
 
     // If course has status 'C' or 'R' and is associated with programs, add it to their requiredCourses
     if (isRequiredCourse(courseStatus) && args.programIds && args.programIds.length > 0) {
@@ -171,6 +183,19 @@ export const updateCourse = mutation({
 
     // Update the course
     await ctx.db.patch(args.courseId, updates);
+
+    // If prerequisites were updated, validate the new chain and revert if invalid
+    if (args.prerequisites !== undefined) {
+      const validation = await courseCatalogService.validatePrerequisiteChain(ctx.db, args.courseId);
+      if (!validation.valid) {
+        // Revert prerequisites to previous value
+        await ctx.db.patch(args.courseId, { prerequisites: course.prerequisites });
+        if (validation.cycle) {
+          throw new Error(`Circular prerequisite detected: ${validation.cycle.join(" -> ")}`);
+        }
+        throw new Error(validation.reason || "Invalid prerequisite chain");
+      }
+    }
 
     // Sync course with program requiredCourses based on status
     // If status is 'C' or 'R', add to requiredCourses; if 'E', remove from requiredCourses
