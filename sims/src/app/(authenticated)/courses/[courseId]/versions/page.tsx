@@ -9,8 +9,10 @@ import ComponentCard from '@/components/common/ComponentCard';
 import Loading from '@/components/loading/Loading';
 import CourseVersionHistory from '../_components/CourseVersionHistory';
 import CourseVersionComparison from '../_components/CourseVersionComparison';
+import PrerequisitesGraph from '../_components/PrerequisitesGraph';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import Badge from '@/components/ui/badge/Badge';
+import Alert from '@/components/ui/alert/Alert';
 
 export default function CourseVersionsPage() {
   const params = useParams();
@@ -41,6 +43,10 @@ export default function CourseVersionsPage() {
 
   const left = versions?.find((v: any) => v._id === leftVersionId) ?? null;
   const right = versions?.find((v: any) => v._id === rightVersionId) ?? null;
+
+  const graphRes = useQuery(api.functions.courses.getPrerequisitesGraph, courseId ? { courseId } : 'skip');
+  const graph = graphRes?.graph ?? {};
+  const validation = graphRes?.validation ?? { valid: true };
 
   return (
     <div>
@@ -84,6 +90,25 @@ export default function CourseVersionsPage() {
         <div className="mt-6">
           <ComponentCard title="Compare Versions">
             <CourseVersionComparison versionA={left} versionB={right} />
+          </ComponentCard>
+        </div>
+
+        <div className="mt-6">
+          <ComponentCard title="Prerequisites Graph">
+            {validation && !validation.valid ? (
+              <div className="mb-4">
+                <Alert variant="error" title="Circular prerequisite detected" message={validation.cycle ? `Cycle: ${validation.cycle.join(' -> ')}` : (validation.reason || 'Invalid prerequisite chain')} />
+              </div>
+            ) : null}
+
+            <PrerequisitesGraph
+              graph={graph}
+              root={undefined}
+              width={800}
+              height={360}
+              validation={validation}
+              onNodeClick={(code) => window.location.href = `/courses?searchQuery=${encodeURIComponent(code)}`}
+            />
           </ComponentCard>
         </div>
       </ComponentCard>

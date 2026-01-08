@@ -10,6 +10,8 @@ type Props = {
   width?: number;
   height?: number;
   onNodeClick?: (code: string) => void; // optional click handler to navigate to course details
+  // Optional validation result with a cycle to highlight
+  validation?: { valid: true } | { valid: false; cycle?: string[]; reason?: string };
 };
 
 export default function PrerequisitesGraph({
@@ -103,18 +105,32 @@ export default function PrerequisitesGraph({
   const renderEdges = () => {
     const edges: JSX.Element[] = [];
 
+    const cycleSet = new Set<string>((props.validation && (props.validation as any).cycle) || []);
+    const cycleEdges = new Set<string>();
+    if (cycleSet.size > 0) {
+      const cycleArr = Array.from(cycleSet);
+      // Build cycle edges by checking adjacency
+      for (let i = 0; i < cycleArr.length; i++) {
+        const a = cycleArr[i];
+        const b = cycleArr[(i + 1) % cycleArr.length];
+        cycleEdges.add(`${a}->${b}`);
+      }
+    }
+
     for (const [node, preds] of Object.entries(graph)) {
       for (const p of preds || []) {
         const from = layout.get(p);
         const to = layout.get(node);
         if (!from || !to) continue;
         const path = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+        const edgeKey = `${p}->${node}`;
+        const isCycleEdge = cycleEdges.has(edgeKey);
         edges.push(
           <path
-            key={`${p}->${node}`}
+            key={edgeKey}
             d={path}
-            stroke="#9CA3AF"
-            strokeWidth={2}
+            stroke={isCycleEdge ? '#DC2626' : '#9CA3AF'}
+            strokeWidth={isCycleEdge ? 3 : 2}
             fill="none"
             markerEnd="url(#arrow)"
             className="transition-colors"
@@ -129,9 +145,13 @@ export default function PrerequisitesGraph({
   const renderNodes = () => {
     const elems: JSX.Element[] = [];
 
+    const cycleArr = (props.validation && (props.validation as any).cycle) || [];
+    const cycleSet = new Set<string>(cycleArr as string[]);
+
     for (const n of nodes) {
       const pos = layout.get(n);
       if (!pos) continue;
+      const isInCycle = cycleSet.has(n);
       elems.push(
         <g
           key={n}
@@ -140,14 +160,21 @@ export default function PrerequisitesGraph({
           onClick={() => onNodeClick && onNodeClick(n)}
           onMouseEnter={(e) => {
             const target = e.currentTarget as SVGGElement;
-            target.querySelector('circle')?.setAttribute('fill', '#fef3c7');
+            if (!isInCycle) target.querySelector('circle')?.setAttribute('fill', '#fef3c7');
           }}
           onMouseLeave={(e) => {
             const target = e.currentTarget as SVGGElement;
-            target.querySelector('circle')?.setAttribute('fill', '#fff');
+            if (!isInCycle) target.querySelector('circle')?.setAttribute('fill', '#fff');
           }}
         >
-          <circle r={20} cx={0} cy={0} fill="#fff" stroke="#1F2937" strokeWidth={1.5} />
+          <circle
+            r={20}
+            cx={0}
+            cy={0}
+            fill={isInCycle ? '#fee2e2' : '#fff'}
+            stroke={isInCycle ? '#DC2626' : '#1F2937'}
+            strokeWidth={isInCycle ? 2.5 : 1.5}
+          />
           <text x={0} y={4} textAnchor="middle" fontSize={11} className="text-gray-700">
             {n}
           </text>

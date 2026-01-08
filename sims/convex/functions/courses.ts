@@ -8,6 +8,7 @@ import { query } from "../_generated/server";
 import { v } from "convex/values";
 import { Id } from "../_generated/dataModel";
 import { validateSessionToken } from "../lib/session";
+import { courseCatalogService } from "../lib/services";
 
 /**
  * List public courses with filtering and search
@@ -315,6 +316,19 @@ export const getVersions = query({
 
     // Sort by version descending (latest first)
     return mapped.sort((a, b) => (b.version ?? 0) - (a.version ?? 0));
+  },
+});
+
+export const getPrerequisitesGraph = query({
+  args: { courseId: v.id("courses") },
+  handler: async (ctx, args) => {
+    // Use the CourseCatalogService to build the graph and validate chains
+    const graph = await courseCatalogService.getPrerequisitesGraph(ctx.db, args.courseId);
+    const validation = await courseCatalogService.validatePrerequisiteChain(ctx.db, args.courseId);
+    return {
+      graph,
+      validation,
+    };
   },
 });
 
