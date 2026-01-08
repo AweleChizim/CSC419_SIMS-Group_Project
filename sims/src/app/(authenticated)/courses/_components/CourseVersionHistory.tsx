@@ -24,9 +24,10 @@ type Props = {
   onRetry?: () => void;
   onArchive?: (id: string) => void; // wired later
   onRestore?: (id: string) => void; // wired later
+  onCreateVersion?: () => void; // Callback to open create version modal
 };
 
-export default function CourseVersionHistory({ versions, isLoading, error, onRetry, onArchive, onRestore }: Props) {
+export default function CourseVersionHistory({ versions, isLoading, error, onRetry, onArchive, onRestore, onCreateVersion }: Props) {
   if (isLoading) {
     return (
       <div className="py-12 flex flex-col items-center justify-center">
@@ -51,12 +52,15 @@ export default function CourseVersionHistory({ versions, isLoading, error, onRet
     return (
       <div className="py-12 text-center text-gray-500 dark:text-gray-400">
         <p className="text-lg font-medium mb-2">No versions yet</p>
-        <p className="text-sm">There are no saved versions for this course. Create the first version from the admin interface or contact your department administrator.</p>
+        <p className="text-sm">
+          {onCreateVersion 
+            ? 'There are no saved versions for this course. Create the first version to get started.' 
+            : 'There are no saved versions for this course. Contact your department administrator.'}
+        </p>
         <div className="mt-4 flex items-center justify-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => {
-            const courseId = typeof window !== 'undefined' ? (window as { courseId?: string }).courseId || '' : '';
-            window.location.href = `/admin/courses/${courseId}/versions/new`;
-          }}>Create first version</Button>
+          {onCreateVersion && (
+            <Button size="sm" variant="outline" onClick={onCreateVersion}>Create first version</Button>
+          )}
           <Button size="sm" variant="text-only" onClick={() => onRetry && onRetry()}>Retry</Button>
         </div>
       </div>
