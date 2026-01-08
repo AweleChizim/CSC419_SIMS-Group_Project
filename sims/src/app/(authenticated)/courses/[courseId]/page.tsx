@@ -14,6 +14,9 @@ import Badge from '@/components/ui/badge/Badge';
 import Alert from '@/components/ui/alert/Alert';
 import { Modal } from '@/components/ui/modal';
 import Link from 'next/link';
+import PrerequisitesGraph from '../_components/PrerequisitesGraph';
+import Loading from '@/components/loading/Loading';
+import Alert from '@/components/ui/alert/Alert';
 
 type CourseDetails = {
   title: string;
@@ -28,6 +31,83 @@ type CourseDetails = {
   }>;
 };
 
+function PrerequisitesSection({ courseId }: { courseId: Id<'courses'> }) {
+  const graphRes = useQuery(api.functions.courses.getPrerequisitesGraph, courseId ? { courseId } : 'skip');
+  const loading = graphRes === undefined;
+  const graph = graphRes?.graph ?? {};
+  const validation = graphRes?.validation ?? { valid: true };
+  const root = graphRes?.root ?? null;
+
+  function buildChains(graph: Record<string, string[]>, root: string | null) {
+    if (!root) return [] as string[][];
+    const chains: string[][] = [];
+    const path: string[] = [];
+
+    function dfs(node: string) {
+      path.push(node);
+      const neigh = graph[node] || [];
+      if (neigh.length === 0) {
+        chains.push([...path]);
+      } else {
+        for (const n of neigh) {
+          dfs(n);
+        }
+      }
+      path.pop();
+    }
+
+    dfs(root);
+    return chains;
+  }
+
+  const chains = buildChains(graph, root);
+
+  return (
+    <ComponentCard title="Prerequisite Graph">
+      {loading ? (
+        <div className="py-8 flex items-center justify-center"><Loading /></div>
+      ) : (
+        <>
+          {!validation.valid ? (
+            <div className="mb-4">
+              <Alert variant="error" title="Circular prerequisite detected" message={validation.cycle ? `Cycle: ${validation.cycle.join(' -> ')}` : (validation.reason || 'Invalid prerequisite chain')} />
+            </div>
+          ) : null}
+
+          <PrerequisitesGraph
+            graph={graph}
+            root={root ?? undefined}
+            width={700}
+            height={300}
+            validation={validation}
+            onNodeClick={(code) => window.location.href = `/courses?searchQuery=${encodeURIComponent(code)}`}
+          />
+
+          <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Prerequisite chains</div>
+            {chains.length === 0 ? (
+              <div className="text-gray-500">No chains available</div>
+            ) : (
+              <ul className="list-disc list-inside space-y-1">
+                {chains.map((chain, idx) => (
+                  <li key={idx}>
+                    {chain.map((code, i) => (
+                      <span key={code}>
+                        <Link href={`/courses?searchQuery=${encodeURIComponent(code)}`} className="text-blue-600 hover:underline">{code}</Link>
+                        {i < chain.length - 1 ? ' → ' : ''}
+                      </span>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+    </ComponentCard>
+  );
+}
+
 export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.courseId as Id<'courses'>;
@@ -39,6 +119,13 @@ export default function CourseDetailPage() {
     }
     return null;
   });
+
+  // Fetch prerequisites graph and validation
+  const graphRes = useQuery(api.functions.courses.getPrerequisitesGraph, courseId ? { courseId } : 'skip');
+  const graphLoading = graphRes === undefined;
+  const graph = graphRes?.graph ?? {};
+  const graphValidation = graphRes?.validation ?? { valid: true };
+  const graphRoot = graphRes?.root ?? null;
 
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
@@ -221,6 +308,11 @@ export default function CourseDetailPage() {
               <Link href={`/courses/${courseId}/versions`}>
                 <Button size="sm" variant="outline">View Versions</Button>
               </Link>
+            </div>
+
+            {/* Prerequisites Graph */}
+            <div className="mt-4">
+              <PrerequisitesSection courseId={courseId} />
             </div>
           </div>
         </ComponentCard>

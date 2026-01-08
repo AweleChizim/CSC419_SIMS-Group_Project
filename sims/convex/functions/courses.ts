@@ -325,9 +325,15 @@ export const getPrerequisitesGraph = query({
     // Use the CourseCatalogService to build the graph and validate chains
     const graph = await courseCatalogService.getPrerequisitesGraph(ctx.db, args.courseId);
     const validation = await courseCatalogService.validatePrerequisiteChain(ctx.db, args.courseId);
+
+    // Also include the root course code for client use
+    const course = await ctx.db.get(args.courseId);
+    const root = course ? course.code : null;
+
     return {
       graph,
       validation,
+      root,
     };
   },
 });
