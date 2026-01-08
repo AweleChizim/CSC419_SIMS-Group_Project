@@ -189,9 +189,69 @@ export const courseCatalogService = {
     db: DatabaseReader,
     courseId: Id<"courses">,
     maxDepth: number = 50
-  ): Promise<void> {
-    // TODO: validate that prerequisite graph has no cycles and is within bounds
-    throw new Error("Not implemented: validatePrerequisiteChain");
+  ): Promise<{ valid: true } | { valid: false; cycle?: string[]; reason?: string }> {
+    const course = await db.get(courseId);
+    if (!course) {
+      throw new NotFoundError("Course", courseId as unknown as string);
+    }
+
+    const startCode: string = course.code;
+
+    // Build adjacency using the existing graph builder
+    const adjacency = await (courseCatalogService as any).getPrerequisitesGraph(db, courseId);
+
+    const visited = new Set<string>();
+    const stack = new Set<string>();
+    const path: string[] = [];
+
+    let foundCycle: string[] | null = null;
+    let reason: string | undefined;
+
+    function dfs(node: string, depth = 0): boolean {
+      if (depth > maxDepth) {
+        reason = `Exceeded max depth (${maxDepth}) starting from ${startCode}`;
+        return true; // stop traversal
+      }
+
+      if (stack.has(node)) {
+        // cycle detected; extract offending chain from path
+        const idx = path.indexOf(node);
+        if (idx >= 0) {
+          foundCycle = path.slice(idx).concat(node);
+        } else {
+          foundCycle = [node, node];
+        }
+        return true;
+      }
+
+      if (visited.has(node)) return false;
+
+      visited.add(node);
+      stack.add(node);
+      path.push(node);
+
+      const neighbors = adjacency[node] || [];
+      for (const n of neighbors) {
+        if (dfs(n, depth + 1)) return true;
+      }
+
+      stack.delete(node);
+      path.pop();
+      return false;
+    }
+
+    // Start DFS from the requested course code
+    dfs(startCode);
+
+    if (foundCycle) {
+      return { valid: false, cycle: foundCycle };
+    }
+
+    if (reason) {
+      return { valid: false, reason };
+    }
+
+    return { valid: true };
   },
 
   async getOfferingTemplates(
