@@ -20,6 +20,7 @@ import type * as functions_department from "../functions/department.js";
 import type * as functions_departments from "../functions/departments.js";
 import type * as functions_enrollments from "../functions/enrollments.js";
 import type * as functions_grades from "../functions/grades.js";
+import type * as functions_importExport from "../functions/importExport.js";
 import type * as functions_instructors from "../functions/instructors.js";
 import type * as functions_notifications from "../functions/notifications.js";
 import type * as functions_programs from "../functions/programs.js";
@@ -44,6 +45,7 @@ import type * as lib_services_courseCatalogService from "../lib/services/courseC
 import type * as lib_services_enrollmentService from "../lib/services/enrollmentService.js";
 import type * as lib_services_gradingService from "../lib/services/gradingService.js";
 import type * as lib_services_graduationService from "../lib/services/graduationService.js";
+import type * as lib_services_importExportService from "../lib/services/importExportService.js";
 import type * as lib_services_index from "../lib/services/index.js";
 import type * as lib_services_notificationService from "../lib/services/notificationService.js";
 import type * as lib_services_schedulingService from "../lib/services/schedulingService.js";
@@ -78,6 +80,7 @@ declare const fullApi: ApiFromModules<{
   "functions/departments": typeof functions_departments;
   "functions/enrollments": typeof functions_enrollments;
   "functions/grades": typeof functions_grades;
+  "functions/importExport": typeof functions_importExport;
   "functions/instructors": typeof functions_instructors;
   "functions/notifications": typeof functions_notifications;
   "functions/programs": typeof functions_programs;
@@ -102,6 +105,7 @@ declare const fullApi: ApiFromModules<{
   "lib/services/enrollmentService": typeof lib_services_enrollmentService;
   "lib/services/gradingService": typeof lib_services_gradingService;
   "lib/services/graduationService": typeof lib_services_graduationService;
+  "lib/services/importExportService": typeof lib_services_importExportService;
   "lib/services/index": typeof lib_services_index;
   "lib/services/notificationService": typeof lib_services_notificationService;
   "lib/services/schedulingService": typeof lib_services_schedulingService;

@@ -18,6 +18,37 @@ import { RoleGuard } from '@/components/auth/RoleGuard';
 import { DownloadIcon, ArrowUpIcon } from '@/icons';
 import { downloadStudentTemplate, downloadCourseTemplate, downloadEnrollmentTemplate } from './_components/csvTemplateUtils';
 
+// Put this at the top of your file
+
+interface ValidationResult {
+  row: number;
+  data: Record<string, string>;
+  isValid: boolean;
+  errors: string[];
+}
+
+interface ValidationError {
+  row: number;
+  errors: string[];
+}
+
+type ValidationPreview =
+  | {
+      isValid: true;
+      totalRows: number;
+      validRows: number;
+      invalidRows: number;
+      results: ValidationResult[];
+    }
+  | {
+      isValid: false;
+      totalRows: number;
+      validRows: number;
+      invalidRows: number;
+      errors: ValidationError[];
+    };
+
+
 // Extended FileInput with accept and disabled props
 const FileInputWithAccept = React.forwardRef<
     HTMLInputElement,
@@ -42,12 +73,7 @@ type Department = {
 };
 
 
-type ValidationResult = {
-    row: number;
-    data?: Record<string, string>;
-    isValid: boolean;
-    errors: string[];
-};
+
 
 type ImportResult = {
     success: boolean;
@@ -78,13 +104,7 @@ export default function ImportExportPage() {
     const [selectedSectionId, setSelectedSectionId] = useState<string>('');
     const [isValidating, setIsValidating] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
-    const [validationResult, setValidationResult] = useState<{
-        isValid: boolean;
-        totalRows: number;
-        validRows: number;
-        invalidRows: number;
-        results: ValidationResult[];
-    } | null>(null);
+    const [validationResult, setValidationResult] = useState<ValidationPreview | null>(null);
     const [importResult, setImportResult] = useState<ImportResult | null>(null);
     const [alertMessage, setAlertMessage] = useState<{
         variant: 'error' | 'success' | 'warning' | 'info';
@@ -105,7 +125,7 @@ export default function ImportExportPage() {
     // Fetch departments
     const departments = useQuery(
         api.functions.departments.list,
-        sessionToken ? { token: sessionToken } : 'skip'
+        sessionToken ? {} : 'skip'
     ) as Department[] | undefined;
 
     // Fetch sections for enrollment import/export (using registrar query for admin access)
@@ -120,25 +140,26 @@ export default function ImportExportPage() {
 
     // Validation queries
     const validateStudentCSV = useQuery(
-        api.functions.importExport.validateStudentCSV,
-        isValidating && csvContent && sessionToken
-            ? { csvContent, token: sessionToken }
-            : 'skip'
+    api.functions.importExport.validateStudentCSV,
+    isValidating && csvContent && importType === 'students'
+        ? { csvContent }
+        : 'skip'
     );
 
     const validateCourseCSV = useQuery(
         api.functions.importExport.validateCourseCSV,
-        isValidating && csvContent && importType === 'courses' && sessionToken
-            ? { csvContent, token: sessionToken }
+        isValidating && csvContent && importType === 'courses'
+            ? { csvContent }
             : 'skip'
     );
 
     const validateEnrollmentCSV = useQuery(
         api.functions.importExport.validateEnrollmentCSV,
-        isValidating && csvContent && importType === 'enrollments' && selectedSectionId && sessionToken
-            ? { csvContent, sectionId: selectedSectionId as Id<'sections'>, token: sessionToken }
+        isValidating && csvContent && importType === 'enrollments' && selectedSectionId
+            ? { csvContent, sectionId: selectedSectionId as Id<'sections'> }
             : 'skip'
     );
+
 
     // Import mutations
     const importStudentsMutation = useMutation(api.functions.importExport.importStudents);
@@ -241,19 +262,44 @@ export default function ImportExportPage() {
 
     // Update validation result when query completes
     React.useEffect(() => {
-        if (isValidating) {
-            if (importType === 'students' && validateStudentCSV) {
-                setValidationResult(validateStudentCSV);
-                setIsValidating(false);
-            } else if (importType === 'courses' && validateCourseCSV) {
-                setValidationResult(validateCourseCSV);
-                setIsValidating(false);
-            } else if (importType === 'enrollments' && validateEnrollmentCSV) {
-                setValidationResult(validateEnrollmentCSV);
-                setIsValidating(false);
-            }
-        }
-    }, [validateStudentCSV, validateCourseCSV, validateEnrollmentCSV, isValidating, importType]);
+    if (!isValidating) return;
+
+    const result =
+        importType === 'students'
+            ? validateStudentCSV
+            : importType === 'courses'
+            ? validateCourseCSV
+            : validateEnrollmentCSV;
+
+    if (!result) return;
+
+    if (result.isValid) {
+    setValidationResult({
+        isValid: true,
+        totalRows: result.totalRows,
+        validRows: result.validRows,
+        invalidRows: result.invalidRows,
+        results: result.results ?? [],   // ✅ fallback to empty array
+    });
+    } else {
+    setValidationResult({
+        isValid: false,
+        totalRows: result.totalRows,
+        validRows: result.validRows,
+        invalidRows: result.invalidRows,
+        errors: result.errors ?? [],     // ✅ fallback to empty array
+    });
+    }
+
+    setIsValidating(false);
+    }, [
+        isValidating,
+        importType,
+        validateStudentCSV,
+        validateCourseCSV,
+        validateEnrollmentCSV,
+    ]);
+
 
     // Handle import
     const handleImport = async () => {
@@ -610,27 +656,22 @@ export default function ImportExportPage() {
                                                 </div>
                                             </div>
 
-                                            {validationResult.invalidRows > 0 && (
-                                                <div className="max-h-64 space-y-2 overflow-y-auto">
-                                                    {validationResult.results
-                                                        .filter((r) => !r.isValid)
-                                                        .map((result, idx) => (
-                                                            <div
-                                                                key={idx}
-                                                                className="rounded border border-error-200 bg-error-50 p-3 dark:border-error-800 dark:bg-error-900/20"
-                                                            >
-                                                                <div className="text-sm font-medium text-error-800 dark:text-error-300">
-                                                                    Row {result.row}:
-                                                                </div>
-                                                                <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-error-700 dark:text-error-400">
-                                                                    {result.errors.map((error, errIdx) => (
-                                                                        <li key={errIdx}>{error}</li>
-                                                                    ))}
-                                                                </ul>
-                                                            </div>
+                                            {!validationResult.isValid &&
+                                            validationResult.errors.map((error, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="rounded border border-error-200 bg-error-50 p-3 dark:border-error-800 dark:bg-error-900/20"
+                                                >
+                                                    <div className="text-sm font-medium text-error-800 dark:text-error-300">
+                                                        Row {error.row}:
+                                                    </div>
+                                                    <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-error-700 dark:text-error-400">
+                                                        {error.errors.map((err, errIdx) => (
+                                                            <li key={errIdx}>{err}</li>
                                                         ))}
+                                                    </ul>
                                                 </div>
-                                            )}
+                                            ))}
                                         </div>
                                     )}
 
