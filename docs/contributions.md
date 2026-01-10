@@ -48,7 +48,7 @@ UX DESIGNER (@ayomidemalik)
 QA TEAM LEAD (@HenryOkwudili)
 - PRs: e3f9230, d80b4d5, 29b2715
 - Key Commits:  Created test logs for bugs and use cases | Added quality assurance documents
-- Notes: Developed test plans and QA documentations and verified acceptance criteria. Created and maintained test logs and ensure all system features with in-line with the specified standards.
+- Notes: Developed test plans and QA documentations and verified acceptance criteria. Created and maintained test logs and ensured all system features with in-line with the specified standards.
 
 QA / TESTING TEAM MEMBER (@Barizio)
 - PRs: 6cd70df
